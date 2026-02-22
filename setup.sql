@@ -32,8 +32,3 @@ INSERT INTO movies (tmdb_id, title, year, category, poster_url, backdrop_url, im
   (414906, 'The Batman', 2022, ARRAY['Action','Drama','DC'], 'https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg', 'https://image.tmdb.org/t/p/w1280/b0PlSFdDwbyFAJlgN7YhkPgifRh.jpg', 7.8, '85%', 'https://www.youtube.com/embed/mqqft2x_Aa4', TRUE),
   (155, 'The Dark Knight', 2008, ARRAY['Action','Drama','DC'], 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911BytUjfs2gX1T.jpg', 'https://image.tmdb.org/t/p/w1280/nMKdUUepR0i5zn0y1T4CsSB5ez.jpg', 9.0, '94%', 'https://www.youtube.com/embed/EXeTwQWrcwY', TRUE),
   (157336, 'Interstellar', 2014, ARRAY['Action','Drama'], 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg', 'https://image.tmdb.org/t/p/w1280/xJHokMbljXjADYdit5fK1DVfjko.jpg', 8.7, '73%', 'https://www.youtube.com/embed/zSWdZVtXT7E', FALSE);
-
--- AV Content Seed
-INSERT INTO movies (title, year, category, poster_url, backdrop_url, imdb_rating, rt_score, direct_url) VALUES
-  ('Japanese AV Secret Love', 2024, ARRAY['18+', 'Romance'], 'https://place-hold.it/500x750/1a1d29/7c4dff?text=AV+SECRET+LOVE&fontsize=40', 'https://place-hold.it/1280x720/1a1d29/2196F3?text=AV+PREMIUM+CLIP', 8.2, '80%', 'https://www.p**nhub.com/embed/66f68541e204b'),
-  ('Adult Clip: Beach Night', 2025, ARRAY['18+', 'Family'], 'https://place-hold.it/500x750/1a1d29/e91e63?text=AV+BEACH+NIGHT&fontsize=40', 'https://place-hold.it/1280x720/1a1d29/e91e63?text=AV+BEACH+NIGHT', 7.9, '85%', 'https://www.x****.com/embed/6968037');

@@ -1,6 +1,6 @@
 // ============================================
 // EVC - Movie Streaming Website
-// Full SPA + Movie Player + Google Login + AV/Clips Support
+// Full SPA + Movie Player + Google Login
 // ============================================
 
 // --- Supabase Config ---
@@ -50,10 +50,6 @@ const fallbackMovies = [
   { id: 12, tmdb_id: 603692, title: "John Wick: Chapter 4", year: 2023, category: ["Action"], poster_url: "https://image.tmdb.org/t/p/w500/vZloFAK7NmvMGKE7Q2KBnHEI4lg.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/h8gHn0OzBoKcXvwnKtbPMkDHZ0g.jpg", imdb_rating: 7.7, rt_score: "94%", trailer_url: "https://www.youtube.com/embed/qEVUtrk8_B4", is_featured: false },
   { id: 13, tmdb_id: 76600, title: "Avatar 2", year: 2022, category: ["Action", "Family", "Disney"], poster_url: "https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/Yc9q6QuWrMp9nuDm5R8ExNoExbi.jpg", imdb_rating: 7.6, rt_score: "76%", trailer_url: "https://www.youtube.com/embed/d9MyW72ELq0", is_featured: false },
   { id: 14, tmdb_id: 361743, title: "Top Gun: Maverick", year: 2022, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/62HCnUTziyWQpDaBO2i1DX17ljH.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/AaV1YIdWKRYmfih9zEISsdm7wdz.jpg", imdb_rating: 8.3, rt_score: "96%", trailer_url: "https://www.youtube.com/embed/giXco2jaZ_4", is_featured: false },
-  // AV / Adult Content
-  { id: 15, title: "Japanese AV Secret Love", year: 2024, category: ["18+", "Romance"], poster_url: "https://place-hold.it/500x750/1a1d29/7c4dff?text=AV+SECRET+LOVE&fontsize=40", backdrop_url: "https://place-hold.it/1280x720/1a1d29/2196F3?text=AV+PREMIUM+CLIP", imdb_rating: 8.2, rt_score: "80%", direct_url: "https://www.p**nhub.com/embed/66f68541e204b", is_featured: false },
-  { id: 16, title: "Adult Clip: Beach Night", year: 2025, category: ["18+", "Family"], poster_url: "https://place-hold.it/500x750/1a1d29/e91e63?text=AV+BEACH+NIGHT&fontsize=40", backdrop_url: "https://place-hold.it/1280x720/1a1d29/e91e63?text=AV+BEACH+NIGHT", imdb_rating: 7.9, rt_score: "85%", direct_url: "https://www.x****.com/embed/6968037", is_featured: false },
-  { id: 17, title: "AV Special: Rain Night", year: 2024, category: ["18+"], poster_url: "https://place-hold.it/500x750/1a1d29/2196F3?text=AV+RAIN+NIGHT&fontsize=40", backdrop_url: "https://place-hold.it/1280x720/1a1d29/7c4dff?text=AV+RAIN+NIGHT", imdb_rating: 8.5, rt_score: "90%", direct_url: "https://www.p**nhub.com/embed/66f68541e204b", is_featured: false },
 ];
 
 // --- DOM elements ---
@@ -98,15 +94,16 @@ function showMovieDetail(m) {
   document.getElementById('detailDownload').onclick = () => { addToDownloads(m); };
 }
 
-// --- Dynamic Home Tabs logic ---
+// --- Home logic ---
 function renderHome() {
   contentArea.innerHTML = `<div class="content-tabs">
     <button class="content-tab ${activeTab === 'movies' ? 'active' : ''}" data-tab="movies">Movies</button>
-    <button class="content-tab ${activeTab === '18+' ? 'active' : ''}" data-tab="18+">18+ Video</button>
+    <button class="content-tab ${activeTab === 'tv' ? 'active' : ''}" data-tab="tv">TV Series</button>
+    <button class="content-tab ${activeTab === 'anime' ? 'active' : ''}" data-tab="anime">Anime</button>
     <button class="content-tab ${activeTab === 'music' ? 'active' : ''}" data-tab="music">Music</button>
   </div>
   <h2 class="section-title">New Releases</h2><div class="featured-movies">${allMovies.filter(m => m.is_featured).map(m => `<div class="featured-card" data-id="${m.id}" style="background-image:url(${m.backdrop_url});"><div class="overlay"><div class="featured-info"><h3>${m.title}</h3><div class="year">${m.year}</div></div><button class="watch-btn">Play</button></div></div>`).join('')}</div>
-  <div class="category-filter">${['All', 'Action', 'DC', 'Marvel', 'Drama', '18+'].map(c => `<button class="category-pill ${activeCategory === c ? 'active' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
+  <div class="category-filter">${['All', 'Action', 'Comedy', 'DC', 'Disney', 'Drama', 'Marvel'].map(c => `<button class="category-pill ${activeCategory === c ? 'active' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
   <div class="movie-grid" id="homeGrid"></div>`;
   renderFilteredHome();
   contentArea.querySelectorAll('.featured-card').forEach(c => c.onclick = () => { const m = allMovies.find(x => x.id === parseInt(c.dataset.id)); if (m) showMovieDetail(m); });
@@ -118,10 +115,9 @@ function renderFilteredHome() {
   const q = searchInput.value.toLowerCase().trim();
   const f = allMovies.filter(m => {
     const c = m.category || [];
-    const matchTab = activeTab === 'movies' ? !c.includes('18+') : c.includes(activeTab);
     const matchCat = activeCategory === 'All' || c.includes(activeCategory);
     const matchSearch = !q || m.title.toLowerCase().includes(q) || c.some(x => x.toLowerCase().includes(q));
-    return matchTab && matchCat && matchSearch;
+    return matchCat && matchSearch;
   });
   renderMovieGrid(f, 'homeGrid');
 }
@@ -130,7 +126,7 @@ function renderFilteredHome() {
 const rS = (t, d, id) => contentArea.innerHTML = `<h2 class="section-title">${t}</h2><p class="section-desc">${d}</p><div class="movie-grid" id="${id}"></div>`;
 function renderTrending() { rS('Trending', 'Top rated', 'trendingGrid'); renderMovieGrid([...allMovies].sort((a, b) => b.imdb_rating - a.imdb_rating), 'trendingGrid'); }
 function renderComingSoon() { contentArea.innerHTML = `<h2 class="section-title">Coming Soon</h2><div class="coming-soon-list">${allMovies.slice(0, 4).map(m => `<div class="coming-soon-card"><div class="cs-poster"><img src="${m.poster_url}"/></div><div class="cs-info"><h3>${m.title}</h3><span>${m.year}</span><button class="watch-btn" onclick='showMovieDetail(${JSON.stringify(m)})'>Trailer</button></div></div>`).join('')}</div>`; }
-function renderCategories() { contentArea.innerHTML = `<h2 class="section-title">Categories</h2><div class="categories-grid">${['Action', 'DC', 'Marvel', 'Drama', '18+'].map(c => `<div class="category-card" onclick="activeCategory='${c}';navigateTo('home')"><h3>${c}</h3></div>`).join('')}</div>`; }
+function renderCategories() { contentArea.innerHTML = `<h2 class="section-title">Categories</h2><div class="categories-grid">${['Action', 'Comedy', 'DC', 'Disney', 'Drama', 'Marvel'].map(c => `<div class="category-card" onclick="activeCategory='${c}';navigateTo('home')"><h3>${c}</h3></div>`).join('')}</div>`; }
 function renderHistory() { const h = storage.get('history').map(x => allMovies.find(m => m.id === x.id)).filter(Boolean); rS('History', `${h.length} items`, 'historyGrid'); renderMovieGrid(h, 'historyGrid'); }
 function renderSaved() { const s = storage.get('saved').map(x => allMovies.find(m => m.id === x.id)).filter(Boolean); rS('Saved', `${s.length} items`, 'savedGrid'); renderMovieGrid(s, 'savedGrid'); }
 function renderLibrary() { const l = storage.get('library').map(x => allMovies.find(m => m.id === x.id)).filter(Boolean); contentArea.innerHTML = `<h2 class="section-title">Library</h2><div class="movie-grid" id="libGrid"></div>`; renderMovieGrid(l, 'libGrid'); }
