@@ -1,6 +1,6 @@
 // ============================================
 // EVC - Movie Streaming Website
-// Full SPA with All Pages & Systems
+// Full SPA + Movie Player + Google Login + AV/Clips Support
 // ============================================
 
 // --- Supabase Config ---
@@ -11,6 +11,15 @@ let supabaseClient = null;
 let allMovies = [];
 let currentPage = 'home';
 let activeCategory = 'All';
+let activeTab = 'movies';
+let currentUser = null;
+
+// --- Embed Sources for Full Movies ---
+const EMBED_SOURCES = [
+  { name: 'VidSrc', url: id => `https://vidsrc.xyz/embed/movie/${id}` },
+  { name: '2Embed', url: id => `https://www.2embed.cc/embed/${id}` },
+  { name: 'VidSrc.to', url: id => `https://vidsrc.to/embed/movie/${id}` },
+];
 
 // --- localStorage helpers ---
 const storage = {
@@ -20,800 +29,131 @@ const storage = {
   setObj(key, val) { localStorage.setItem('evc_' + key, JSON.stringify(val)); }
 };
 
-// --- User settings defaults ---
-function getSettings() {
-  return storage.getObj('settings') || { theme: 'light', language: 'th', autoplay: true, quality: '1080p', notifications: true };
-}
+function getSettings() { return { theme: 'light', language: 'th', autoplay: true, quality: '1080p', notifications: true, ...storage.getObj('settings') }; }
 function saveSettings(s) { storage.setObj('settings', s); }
-
-function getAccount() {
-  return storage.getObj('account') || { name: 'Movie Fan', email: 'user@evc.com', avatar: 'M', joined: '2025' };
-}
+function getAccount() { return { name: 'Movie Fan', email: 'user@evc.com', avatar: 'M', joined: '2025', ...storage.getObj('account') }; }
 function saveAccount(a) { storage.setObj('account', a); }
 
 // --- Fallback Movie Data ---
 const fallbackMovies = [
-  { id: 1, title: "Pacific Rim", year: 2013, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/sCxfSuEfNE1s3aBFMXRiPireIsK.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/cUJYBIbHLJK2ll0CztrHgrXBOlI.jpg", imdb_rating: 6.9, rt_score: "72%", trailer_url: "https://www.youtube.com/embed/5guMumPFBag", is_featured: true },
-  { id: 2, title: "The Batman", year: 2022, category: ["Action", "Drama", "DC"], poster_url: "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/b0PlSFdDwbyFAJlgN7YhkPgifRh.jpg", imdb_rating: 7.8, rt_score: "85%", trailer_url: "https://www.youtube.com/embed/mqqft2x_Aa4", is_featured: true },
-  { id: 3, title: "The Dark Knight", year: 2008, category: ["Action", "Drama", "DC"], poster_url: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911BytUjfs2gX1T.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/nMKdUUepR0i5zn0y1T4CsSB5ez.jpg", imdb_rating: 9.0, rt_score: "94%", trailer_url: "https://www.youtube.com/embed/EXeTwQWrcwY", is_featured: true },
-  { id: 4, title: "Interstellar", year: 2014, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/xJHokMbljXjADYdit5fK1DVfjko.jpg", imdb_rating: 8.7, rt_score: "73%", trailer_url: "https://www.youtube.com/embed/zSWdZVtXT7E", is_featured: false },
-  { id: 5, title: "Spider-Man: Across the Spider-Verse", year: 2023, category: ["Action", "Comedy", "Marvel"], poster_url: "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/4HodYYKEIsGOdinkGi2Ucz6X9i0.jpg", imdb_rating: 8.7, rt_score: "95%", trailer_url: "https://www.youtube.com/embed/cqGjhVJWtEg", is_featured: false },
-  { id: 6, title: "Inception", year: 2010, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg", imdb_rating: 8.8, rt_score: "87%", trailer_url: "https://www.youtube.com/embed/YoHD9XEInc0", is_featured: false },
-  { id: 7, title: "Deadpool & Wolverine", year: 2024, category: ["Action", "Comedy", "Marvel"], poster_url: "https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/yDHYTfA3R0jFYba16jBB1ef8oIt.jpg", imdb_rating: 7.6, rt_score: "79%", trailer_url: "https://www.youtube.com/embed/73_1biulkYk", is_featured: false },
-  { id: 8, title: "Dune: Part Two", year: 2024, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg", imdb_rating: 8.8, rt_score: "92%", trailer_url: "https://www.youtube.com/embed/Way9Dexny3w", is_featured: false },
-  { id: 9, title: "Avengers: Endgame", year: 2019, category: ["Action", "Marvel"], poster_url: "https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg", imdb_rating: 8.4, rt_score: "94%", trailer_url: "https://www.youtube.com/embed/TcMBFSGVi1c", is_featured: false },
-  { id: 10, title: "Joker", year: 2019, category: ["Drama", "DC"], poster_url: "https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/n6bUvigpRFqSwmPp1m2YMDm2A0Q.jpg", imdb_rating: 8.4, rt_score: "68%", trailer_url: "https://www.youtube.com/embed/zAGVQLHvwOY", is_featured: false },
-  { id: 11, title: "Oppenheimer", year: 2023, category: ["Drama"], poster_url: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/nb3xI8XI3w4pMVZ38VijbsyBqP4.jpg", imdb_rating: 8.5, rt_score: "93%", trailer_url: "https://www.youtube.com/embed/uYPbbksJxIg", is_featured: false },
-  { id: 12, title: "John Wick: Chapter 4", year: 2023, category: ["Action"], poster_url: "https://image.tmdb.org/t/p/w500/vZloFAK7NmvMGKE7Q2KBnHEI4lg.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/h8gHn0OzBoKcXvwnKtbPMkDHZ0g.jpg", imdb_rating: 7.7, rt_score: "94%", trailer_url: "https://www.youtube.com/embed/qEVUtrk8_B4", is_featured: false },
-  { id: 13, title: "Avatar: The Way of Water", year: 2022, category: ["Action", "Family", "Disney"], poster_url: "https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/Yc9q6QuWrMp9nuDm5R8ExNoExbi.jpg", imdb_rating: 7.6, rt_score: "76%", trailer_url: "https://www.youtube.com/embed/d9MyW72ELq0", is_featured: false },
-  { id: 14, title: "Top Gun: Maverick", year: 2022, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/62HCnUTziyWQpDaBO2i1DX17ljH.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/AaV1YIdWKRYmfih9zEISsdm7wdz.jpg", imdb_rating: 8.3, rt_score: "96%", trailer_url: "https://www.youtube.com/embed/giXco2jaZ_4", is_featured: false },
+  { id: 1, tmdb_id: 68726, title: "Pacific Rim", year: 2013, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/sCxfSuEfNE1s3aBFMXRiPireIsK.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/cUJYBIbHLJK2ll0CztrHgrXBOlI.jpg", imdb_rating: 6.9, rt_score: "72%", trailer_url: "https://www.youtube.com/embed/5guMumPFBag", is_featured: true },
+  { id: 2, tmdb_id: 414906, title: "The Batman", year: 2022, category: ["Action", "Drama", "DC"], poster_url: "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/b0PlSFdDwbyFAJlgN7YhkPgifRh.jpg", imdb_rating: 7.8, rt_score: "85%", trailer_url: "https://www.youtube.com/embed/mqqft2x_Aa4", is_featured: true },
+  { id: 3, tmdb_id: 155, title: "The Dark Knight", year: 2008, category: ["Action", "Drama", "DC"], poster_url: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911BytUjfs2gX1T.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/nMKdUUepR0i5zn0y1T4CsSB5ez.jpg", imdb_rating: 9.0, rt_score: "94%", trailer_url: "https://www.youtube.com/embed/EXeTwQWrcwY", is_featured: true },
+  { id: 4, tmdb_id: 157336, title: "Interstellar", year: 2014, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/xJHokMbljXjADYdit5fK1DVfjko.jpg", imdb_rating: 8.7, rt_score: "73%", trailer_url: "https://www.youtube.com/embed/zSWdZVtXT7E", is_featured: false },
+  { id: 5, tmdb_id: 569094, title: "Spider-Man: ATSV", year: 2023, category: ["Action", "Comedy", "Marvel"], poster_url: "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/4HodYYKEIsGOdinkGi2Ucz6X9i0.jpg", imdb_rating: 8.7, rt_score: "95%", trailer_url: "https://www.youtube.com/embed/cqGjhVJWtEg", is_featured: false },
+  { id: 6, tmdb_id: 27205, title: "Inception", year: 2010, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/edv5CZvWj09upOsy2Y6IwDhK8bt.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg", imdb_rating: 8.8, rt_score: "87%", trailer_url: "https://www.youtube.com/embed/YoHD9XEInc0", is_featured: false },
+  { id: 7, tmdb_id: 533535, title: "Deadpool & Wolverine", year: 2024, category: ["Action", "Comedy", "Marvel"], poster_url: "https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/yDHYTfA3R0jFYba16jBB1ef8oIt.jpg", imdb_rating: 7.6, rt_score: "79%", trailer_url: "https://www.youtube.com/embed/73_1biulkYk", is_featured: false },
+  { id: 8, tmdb_id: 693134, title: "Dune: Part Two", year: 2024, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/xOMo8BRK7PfcJv9JCnx7s5hj0PX.jpg", imdb_rating: 8.8, rt_score: "92%", trailer_url: "https://www.youtube.com/embed/Way9Dexny3w", is_featured: false },
+  { id: 9, tmdb_id: 299534, title: "Avengers: Endgame", year: 2019, category: ["Action", "Marvel"], poster_url: "https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg", imdb_rating: 8.4, rt_score: "94%", trailer_url: "https://www.youtube.com/embed/TcMBFSGVi1c", is_featured: false },
+  { id: 10, tmdb_id: 475557, title: "Joker", year: 2019, category: ["Drama", "DC"], poster_url: "https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/n6bUvigpRFqSwmPp1m2YMDm2A0Q.jpg", imdb_rating: 8.4, rt_score: "68%", trailer_url: "https://www.youtube.com/embed/zAGVQLHvwOY", is_featured: false },
+  { id: 11, tmdb_id: 872585, title: "Oppenheimer", year: 2023, category: ["Drama"], poster_url: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/nb3xI8XI3w4pMVZ38VijbsyBqP4.jpg", imdb_rating: 8.5, rt_score: "93%", trailer_url: "https://www.youtube.com/embed/uYPbbksJxIg", is_featured: false },
+  { id: 12, tmdb_id: 603692, title: "John Wick: Chapter 4", year: 2023, category: ["Action"], poster_url: "https://image.tmdb.org/t/p/w500/vZloFAK7NmvMGKE7Q2KBnHEI4lg.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/h8gHn0OzBoKcXvwnKtbPMkDHZ0g.jpg", imdb_rating: 7.7, rt_score: "94%", trailer_url: "https://www.youtube.com/embed/qEVUtrk8_B4", is_featured: false },
+  { id: 13, tmdb_id: 76600, title: "Avatar 2", year: 2022, category: ["Action", "Family", "Disney"], poster_url: "https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/Yc9q6QuWrMp9nuDm5R8ExNoExbi.jpg", imdb_rating: 7.6, rt_score: "76%", trailer_url: "https://www.youtube.com/embed/d9MyW72ELq0", is_featured: false },
+  { id: 14, tmdb_id: 361743, title: "Top Gun: Maverick", year: 2022, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/62HCnUTziyWQpDaBO2i1DX17ljH.jpg", backdrop_url: "https://image.tmdb.org/t/p/w1280/AaV1YIdWKRYmfih9zEISsdm7wdz.jpg", imdb_rating: 8.3, rt_score: "96%", trailer_url: "https://www.youtube.com/embed/giXco2jaZ_4", is_featured: false },
+  // AV / Adult Content
+  { id: 15, title: "Japanese AV Secret Love", year: 2024, category: ["18+", "Romance"], poster_url: "https://place-hold.it/500x750/1a1d29/7c4dff?text=AV+SECRET+LOVE&fontsize=40", backdrop_url: "https://place-hold.it/1280x720/1a1d29/2196F3?text=AV+PREMIUM+CLIP", imdb_rating: 8.2, rt_score: "80%", direct_url: "https://www.p**nhub.com/embed/66f68541e204b", is_featured: false },
+  { id: 16, title: "Adult Clip: Beach Night", year: 2025, category: ["18+", "Family"], poster_url: "https://place-hold.it/500x750/1a1d29/e91e63?text=AV+BEACH+NIGHT&fontsize=40", backdrop_url: "https://place-hold.it/1280x720/1a1d29/e91e63?text=AV+BEACH+NIGHT", imdb_rating: 7.9, rt_score: "85%", direct_url: "https://www.x****.com/embed/6968037", is_featured: false },
+  { id: 17, title: "AV Special: Rain Night", year: 2024, category: ["18+"], poster_url: "https://place-hold.it/500x750/1a1d29/2196F3?text=AV+RAIN+NIGHT&fontsize=40", backdrop_url: "https://place-hold.it/1280x720/1a1d29/7c4dff?text=AV+RAIN+NIGHT", imdb_rating: 8.5, rt_score: "90%", direct_url: "https://www.p**nhub.com/embed/66f68541e204b", is_featured: false },
 ];
 
-// --- DOM ---
-const contentArea = document.getElementById('contentArea');
-const searchInput = document.getElementById('searchInput');
-const sidebarOverlay = document.getElementById('sidebarOverlay');
-const sidebar = document.getElementById('sidebar');
-const mobileHamburger = document.getElementById('mobileHamburger');
+// --- DOM elements ---
+const loginPage = document.getElementById('loginPage'), appContainer = document.getElementById('appContainer'), contentArea = document.getElementById('contentArea'), searchInput = document.getElementById('searchInput'), sidebarOverlay = document.getElementById('sidebarOverlay'), sidebar = document.getElementById('sidebar'), mobileHamburger = document.getElementById('mobileHamburger');
 
-// ============================================
-// SUPABASE
-// ============================================
-function fetchWithTimeout(promise, ms = 5000) {
-  return Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))]);
+// --- Supabase Init ---
+function initSupabase() { if (typeof window.supabase !== 'undefined' && window.supabase.createClient) { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); return true; } return false; }
+async function loadMoviesFromSupabase() { if (!supabaseClient) throw new Error('No Supabase client'); const { data, error } = await supabaseClient.from('movies').select('*').order('id', { ascending: true }); if (error) throw error; return data; }
+
+// --- Auth ---
+async function loginWithGoogle() { if (!supabaseClient) { showToast('Supabase not connected'); return; } try { await supabaseClient.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin + window.location.pathname } }); } catch (err) { showToast('Login failed: ' + err.message); } }
+function loginAsGuest() { currentUser = { name: 'Guest', avatarUrl: null, isGuest: true }; storage.setObj('guestSession', { active: true }); showApp(); }
+async function checkAuthState() { initSupabase(); if (supabaseClient) { const { data: { session } } = await supabaseClient.auth.getSession(); if (session && session.user) { const u = session.user; currentUser = { name: u.user_metadata?.full_name || u.email.split('@')[0], avatarUrl: u.user_metadata?.avatar_url, isGuest: false }; showApp(); return; } } const g = storage.getObj('guestSession'); if (g && g.active) { currentUser = { name: 'Guest', avatarUrl: null, isGuest: true }; showApp(); return; } showLogin(); }
+function logout() { if (supabaseClient && currentUser && !currentUser.isGuest) supabaseClient.auth.signOut(); localStorage.removeItem('evc_guestSession'); currentUser = null; showLogin(); }
+function showLogin() { loginPage.style.display = 'flex'; appContainer.style.display = 'none'; }
+async function showApp() { loginPage.style.display = 'none'; appContainer.style.display = 'flex'; updateUserAvatar(); try { if (supabaseClient) allMovies = await loadMoviesFromSupabase() || fallbackMovies; else allMovies = fallbackMovies; } catch (e) { allMovies = fallbackMovies; } setupGlobalEvents(); navigateTo('home'); }
+function updateUserAvatar() { const el = document.getElementById('headerAvatarBtn'); if (!el || !currentUser) return; if (currentUser.avatarUrl) { el.innerHTML = `<img src="${currentUser.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`; el.style.padding = '0'; } else { el.textContent = (currentUser.name || 'M')[0].toUpperCase(); el.style.padding = ''; } }
+
+// --- Router ---
+function navigateTo(page) { currentPage = page; document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page)); if (window.innerWidth <= 768) { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('active'); } searchInput.value = ''; const pages = { home: renderHome, trending: renderTrending, 'coming-soon': renderComingSoon, categories: renderCategories, history: renderHistory, saved: renderSaved, library: renderLibrary, downloads: renderDownloads, settings: renderSettings, account: renderAccount, help: renderHelp }; (pages[page] || renderHome)(); }
+
+// --- Rendering helpers ---
+function movieCardHTML(m, idx = 0) { const isSaved = storage.get('saved').some(s => s.id === m.id); return `<div class="movie-card" data-id="${m.id}" style="animation-delay:${idx * 0.04}s"><div class="movie-poster"><img src="${m.poster_url}" onerror="this.src='https://place-hold.it/500x750/1a1d29/7c4dff?text=${m.title.split(' ')[0]}';" /><div class="play-overlay"><i class="fas fa-play-circle"></i></div><button class="card-save-btn ${isSaved ? 'saved' : ''}" data-id="${m.id}"><i class="fas fa-bookmark"></i></button></div><div class="movie-info"><h4>${m.title}</h4><span>${m.year}</span></div><div class="movie-rating-bar"><span>⭐ ${m.imdb_rating}</span><span>🍅 ${m.rt_score}</span></div></div>`; }
+function attachCardEvents(container) { container.querySelectorAll('.movie-card').forEach(c => c.addEventListener('click', (e) => { if (e.target.closest('.card-save-btn')) return; const m = allMovies.find(x => x.id === parseInt(c.dataset.id)); if (m) { addToHistory(m); showMovieDetail(m); } })); container.querySelectorAll('.card-save-btn').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); toggleSaved(parseInt(b.dataset.id)); b.classList.toggle('saved'); })); }
+function renderMovieGrid(movies, id) { const c = document.getElementById(id); if (!c) return; if (movies.length === 0) { c.innerHTML = '<div class="empty-state">No items found</div>'; return; } c.innerHTML = movies.map((m, i) => movieCardHTML(m, i)).join(''); attachCardEvents(c); }
+
+// --- Player & Details ---
+function showMovieDetail(m) {
+  const ex = document.getElementById('movieModal'); if (ex) ex.remove();
+  const isS = storage.get('saved').some(s => s.id === m.id);
+  const modal = document.createElement('div'); modal.id = 'movieModal'; modal.className = 'modal-overlay';
+  modal.innerHTML = `<div class="movie-detail-modal"><button class="detail-close-btn" id="closeModal">✕</button><div class="detail-hero" style="background-image:url(${m.backdrop_url});"><div class="detail-hero-overlay"><div class="detail-hero-content"><h1>${m.title}</h1><div class="detail-meta"><span>${m.year}</span><span>⭐ ${m.imdb_rating}</span>${(m.category || []).map(c => `<span class="detail-cat">${c}</span>`).join('')}</div><div class="detail-actions"><button class="detail-play-btn" id="watchFull"><i class="fas fa-play"></i> Watch Full</button><button class="detail-trailer-btn" id="watchTrailer"><i class="fas fa-film"></i> Trailer</button><button class="detail-icon-btn ${isS ? 'saved' : ''}" id="detailSave"><i class="fas fa-bookmark"></i></button><button class="detail-icon-btn" id="detailDownload"><i class="fas fa-download"></i></button></div></div></div></div><div class="detail-player" id="detailPlayer" style="display:none;"><div class="player-header"><div class="source-selector">${m.direct_url ? '<button class="source-btn active">Direct Player</button>' : EMBED_SOURCES.map((s, i) => `<button class="source-btn ${i === 0 ? 'active' : ''}" data-idx="${i}">${s.name}</button>`).join('')}</div><button class="player-close-btn" id="closePlayer">Close Player</button></div><div class="player-frame"><iframe id="movieIframe" src="" allowfullscreen></iframe></div></div></div>`;
+  document.body.appendChild(modal); document.body.style.overflow = 'hidden';
+  const close = () => { modal.remove(); document.body.style.overflow = ''; };
+  document.getElementById('closeModal').onclick = close; modal.onclick = (e) => { if (e.target === modal) close(); };
+  const iframe = document.getElementById('movieIframe'); const player = document.getElementById('detailPlayer');
+  document.getElementById('watchFull').onclick = () => { player.style.display = 'block'; iframe.src = m.direct_url || EMBED_SOURCES[0].url(m.tmdb_id || m.id); player.scrollIntoView({ behavior: 'smooth' }); };
+  document.getElementById('watchTrailer').onclick = () => { player.style.display = 'block'; iframe.src = m.trailer_url; player.scrollIntoView({ behavior: 'smooth' }); };
+  document.querySelectorAll('.source-btn').forEach(b => b.onclick = () => { document.querySelectorAll('.source-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); iframe.src = m.direct_url || EMBED_SOURCES[b.dataset.idx].url(m.tmdb_id || m.id); });
+  document.getElementById('closePlayer').onclick = () => { player.style.display = 'none'; iframe.src = ''; };
+  document.getElementById('detailSave').onclick = () => { toggleSaved(m.id); document.getElementById('detailSave').classList.toggle('saved'); };
+  document.getElementById('detailDownload').onclick = () => { addToDownloads(m); };
 }
 
-async function loadMoviesFromSupabase() {
-  if (typeof window.supabase === 'undefined' || !window.supabase.createClient) throw new Error('Supabase JS not loaded');
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  const { data, error } = await fetchWithTimeout(supabaseClient.from('movies').select('*').order('id', { ascending: true }), 6000);
-  if (error) throw error;
-  if (!data || data.length === 0) throw new Error('No movies in database');
-  return data;
-}
-
-// ============================================
-// INIT
-// ============================================
-async function initApp() {
-  try {
-    allMovies = await loadMoviesFromSupabase();
-    console.log(`✅ Loaded ${allMovies.length} movies from Supabase`);
-  } catch (err) {
-    console.warn('⚠️ Using fallback data:', err.message);
-    allMovies = fallbackMovies;
-  }
-  setupGlobalEvents();
-  navigateTo('home');
-}
-
-// ============================================
-// ROUTER / NAVIGATION
-// ============================================
-function navigateTo(page) {
-  currentPage = page;
-  // Update sidebar active state
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const activeNav = document.querySelector(`.nav-item[data-page="${page}"]`);
-  if (activeNav) activeNav.classList.add('active');
-  // Close mobile sidebar
-  if (window.innerWidth <= 768) { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('active'); }
-  // Clear search
-  searchInput.value = '';
-  // Render page
-  const pages = { home: renderHome, trending: renderTrending, 'coming-soon': renderComingSoon, categories: renderCategories, history: renderHistory, saved: renderSaved, library: renderLibrary, downloads: renderDownloads, settings: renderSettings, account: renderAccount, help: renderHelp };
-  const renderer = pages[page] || renderHome;
-  contentArea.scrollTop = 0;
-  renderer();
-}
-
-// ============================================
-// REUSABLE: Movie Card HTML
-// ============================================
-function movieCardHTML(movie, idx = 0) {
-  const saved = storage.get('saved');
-  const isSaved = saved.some(s => s.id === movie.id);
-  const posterImg = movie.poster_url
-    ? `<img src="${movie.poster_url}" alt="${movie.title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="poster-placeholder" style="display:none;background:linear-gradient(135deg,#2d3436,#6c5ce7);">${movie.title}</div>`
-    : `<div class="poster-placeholder" style="background:linear-gradient(135deg,#2d3436,#6c5ce7);">${movie.title}</div>`;
-
-  return `<div class="movie-card" data-id="${movie.id}" style="animation-delay:${idx * 0.04}s">
-    <div class="movie-poster">
-      ${posterImg}
-      <div class="play-overlay"><i class="fas fa-play-circle"></i></div>
-      <button class="card-save-btn ${isSaved ? 'saved' : ''}" data-id="${movie.id}" title="${isSaved ? 'Remove from Saved' : 'Save'}">
-        <i class="fas fa-bookmark"></i>
-      </button>
-    </div>
-    <div class="movie-info">
-      <h4>${movie.title}</h4>
-      <span class="movie-year">${movie.year}</span>
-    </div>
-    <div class="movie-rating-bar">
-      <span>⭐ ${movie.imdb_rating}</span>
-      <span>🍅 ${movie.rt_score}</span>
-    </div>
-  </div>`;
-}
-
-function attachCardEvents(container) {
-  container.querySelectorAll('.movie-card').forEach(card => {
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('.card-save-btn')) return;
-      const id = parseInt(card.dataset.id);
-      const movie = allMovies.find(m => m.id === id);
-      if (movie) { addToHistory(movie); showTrailerModal(movie); }
-    });
-  });
-  container.querySelectorAll('.card-save-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const id = parseInt(btn.dataset.id);
-      toggleSaved(id);
-      btn.classList.toggle('saved');
-    });
-  });
-}
-
-function renderMovieGrid(movies, containerId) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  if (movies.length === 0) {
-    container.innerHTML = `<div class="empty-state"><i class="fas fa-film"></i><p>No movies found</p></div>`;
-    return;
-  }
-  container.innerHTML = movies.map((m, i) => movieCardHTML(m, i)).join('');
-  attachCardEvents(container);
-}
-
-// ============================================
-// PAGE: HOME
-// ============================================
+// --- Dynamic Home Tabs logic ---
 function renderHome() {
-  const featured = allMovies.filter(m => m.is_featured);
-  const toShow = featured.length >= 2 ? featured : allMovies.slice(0, 3);
-
-  const featuredHTML = toShow.map(movie => {
-    const bg = movie.backdrop_url ? `background-image:url(${movie.backdrop_url}); background-size:cover; background-position:center;` : `background:linear-gradient(135deg,#1a1d29,#2d3436);`;
-    return `<div class="featured-card" data-id="${movie.id}" style="${bg}">
-      <div class="overlay">
-        <div class="featured-info">
-          <h3>${movie.title}</h3>
-          <div class="year">${movie.year}</div>
-          <div class="featured-ratings">
-            <div class="rating"><span class="imdb">⭐</span> ${movie.imdb_rating}</div>
-            <div class="rating"><span class="rt">🍅</span> ${movie.rt_score}</div>
-          </div>
-        </div>
-        <button class="watch-btn" data-id="${movie.id}">Watch</button>
-      </div>
-    </div>`;
-  }).join('');
-
-  const categories = ['All', 'Action', 'Comedy', 'DC', 'Disney', 'Drama', 'Family', 'Horror', 'Marvel', 'Romance'];
-  const pillsHTML = categories.map(c => `<button class="category-pill ${activeCategory === c ? 'active' : ''}" data-category="${c}">${c}</button>`).join('');
-
-  contentArea.innerHTML = `
-    <div class="content-tabs">
-      <button class="content-tab active" data-tab="movies">Movies</button>
-      <button class="content-tab" data-tab="tv">TV Series</button>
-      <button class="content-tab" data-tab="anime">Anime</button>
-      <button class="content-tab" data-tab="music">Music Video</button>
-    </div>
-    <h2 class="section-title">New Releases</h2>
-    <div class="featured-movies">${featuredHTML}</div>
-    <div class="category-filter">${pillsHTML}</div>
-    <div class="movie-grid" id="homeGrid"></div>
-  `;
-
+  contentArea.innerHTML = `<div class="content-tabs">
+    <button class="content-tab ${activeTab === 'movies' ? 'active' : ''}" data-tab="movies">Movies</button>
+    <button class="content-tab ${activeTab === '18+' ? 'active' : ''}" data-tab="18+">18+ Video</button>
+    <button class="content-tab ${activeTab === 'music' ? 'active' : ''}" data-tab="music">Music</button>
+  </div>
+  <h2 class="section-title">New Releases</h2><div class="featured-movies">${allMovies.filter(m => m.is_featured).map(m => `<div class="featured-card" data-id="${m.id}" style="background-image:url(${m.backdrop_url});"><div class="overlay"><div class="featured-info"><h3>${m.title}</h3><div class="year">${m.year}</div></div><button class="watch-btn">Play</button></div></div>`).join('')}</div>
+  <div class="category-filter">${['All', 'Action', 'DC', 'Marvel', 'Drama', '18+'].map(c => `<button class="category-pill ${activeCategory === c ? 'active' : ''}" data-cat="${c}">${c}</button>`).join('')}</div>
+  <div class="movie-grid" id="homeGrid"></div>`;
   renderFilteredHome();
-
-  // Featured click
-  contentArea.querySelectorAll('.featured-card').forEach(card => {
-    card.addEventListener('click', () => { const m = allMovies.find(x => x.id === parseInt(card.dataset.id)); if (m) { addToHistory(m); showTrailerModal(m); } });
-  });
-  contentArea.querySelectorAll('.featured-card .watch-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => { e.stopPropagation(); const m = allMovies.find(x => x.id === parseInt(btn.dataset.id)); if (m) { addToHistory(m); showTrailerModal(m); } });
-  });
-
-  // Category pills
-  contentArea.querySelectorAll('.category-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      contentArea.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      activeCategory = pill.dataset.category;
-      renderFilteredHome();
-    });
-  });
-
-  // Content tabs
-  contentArea.querySelectorAll('.content-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      contentArea.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-    });
-  });
+  contentArea.querySelectorAll('.featured-card').forEach(c => c.onclick = () => { const m = allMovies.find(x => x.id === parseInt(c.dataset.id)); if (m) showMovieDetail(m); });
+  contentArea.querySelectorAll('.content-tab').forEach(t => t.onclick = () => { activeTab = t.dataset.tab; renderHome(); });
+  contentArea.querySelectorAll('.category-pill').forEach(p => p.onclick = () => { activeCategory = p.dataset.cat; renderFilteredHome(); p.parentElement.querySelectorAll('.category-pill').forEach(x => x.classList.toggle('active', x === p)); });
 }
 
 function renderFilteredHome() {
-  const query = searchInput.value.toLowerCase().trim();
-  const filtered = allMovies.filter(m => {
-    const cats = m.category || [];
-    const matchCat = activeCategory === 'All' || cats.includes(activeCategory);
-    const matchSearch = !query || m.title.toLowerCase().includes(query);
-    return matchCat && matchSearch;
+  const q = searchInput.value.toLowerCase().trim();
+  const f = allMovies.filter(m => {
+    const c = m.category || [];
+    const matchTab = activeTab === 'movies' ? !c.includes('18+') : c.includes(activeTab);
+    const matchCat = activeCategory === 'All' || c.includes(activeCategory);
+    const matchSearch = !q || m.title.toLowerCase().includes(q) || c.some(x => x.toLowerCase().includes(q));
+    return matchTab && matchCat && matchSearch;
   });
-  renderMovieGrid(filtered, 'homeGrid');
+  renderMovieGrid(f, 'homeGrid');
 }
 
-// ============================================
-// PAGE: TRENDING
-// ============================================
-function renderTrending() {
-  const sorted = [...allMovies].sort((a, b) => b.imdb_rating - a.imdb_rating);
-  contentArea.innerHTML = `
-    <h2 class="section-title"><i class="fas fa-fire" style="color:#e53935;margin-right:8px;"></i>Trending Now</h2>
-    <p class="section-desc">Top rated movies by IMDb score</p>
-    <div class="movie-grid" id="trendingGrid"></div>
-  `;
-  renderMovieGrid(sorted, 'trendingGrid');
-}
+// --- Other Page Renderers ---
+const rS = (t, d, id) => contentArea.innerHTML = `<h2 class="section-title">${t}</h2><p class="section-desc">${d}</p><div class="movie-grid" id="${id}"></div>`;
+function renderTrending() { rS('Trending', 'Top rated', 'trendingGrid'); renderMovieGrid([...allMovies].sort((a, b) => b.imdb_rating - a.imdb_rating), 'trendingGrid'); }
+function renderComingSoon() { contentArea.innerHTML = `<h2 class="section-title">Coming Soon</h2><div class="coming-soon-list">${allMovies.slice(0, 4).map(m => `<div class="coming-soon-card"><div class="cs-poster"><img src="${m.poster_url}"/></div><div class="cs-info"><h3>${m.title}</h3><span>${m.year}</span><button class="watch-btn" onclick='showMovieDetail(${JSON.stringify(m)})'>Trailer</button></div></div>`).join('')}</div>`; }
+function renderCategories() { contentArea.innerHTML = `<h2 class="section-title">Categories</h2><div class="categories-grid">${['Action', 'DC', 'Marvel', 'Drama', '18+'].map(c => `<div class="category-card" onclick="activeCategory='${c}';navigateTo('home')"><h3>${c}</h3></div>`).join('')}</div>`; }
+function renderHistory() { const h = storage.get('history').map(x => allMovies.find(m => m.id === x.id)).filter(Boolean); rS('History', `${h.length} items`, 'historyGrid'); renderMovieGrid(h, 'historyGrid'); }
+function renderSaved() { const s = storage.get('saved').map(x => allMovies.find(m => m.id === x.id)).filter(Boolean); rS('Saved', `${s.length} items`, 'savedGrid'); renderMovieGrid(s, 'savedGrid'); }
+function renderLibrary() { const l = storage.get('library').map(x => allMovies.find(m => m.id === x.id)).filter(Boolean); contentArea.innerHTML = `<h2 class="section-title">Library</h2><div class="movie-grid" id="libGrid"></div>`; renderMovieGrid(l, 'libGrid'); }
+function renderDownloads() { contentArea.innerHTML = `<h2 class="section-title">Downloads</h2><div class="downloads-list">${storage.get('downloads').map(d => { const m = allMovies.find(x => x.id === d.id); return m ? `<div class="download-item"><img src="${m.poster_url}"/><div><h4>${m.title}</h4><span>${d.size}</span></div></div>` : '' }).join('')}</div>`; }
+function renderSettings() { contentArea.innerHTML = `<h2 class="section-title">Settings</h2><button class="save-settings-btn" onclick="storage.set('history',[]);storage.set('saved',[]);showToast('Cleared')">Clear All Data</button>`; }
+function renderAccount() { contentArea.innerHTML = `<h2 class="section-title">Account</h2><div class="account-card"><div class="account-avatar">${currentUser?.name[0] || 'M'}</div><div class="account-form"><h3>${currentUser?.name || 'Guest'}</h3><button class="save-settings-btn" onclick="logout()">Logout</button></div></div>`; }
+function renderHelp() { contentArea.innerHTML = `<h2 class="section-title">Help</h2><p>Contact support at help@evc.com</p>`; }
 
-// ============================================
-// PAGE: COMING SOON
-// ============================================
-function renderComingSoon() {
-  const upcoming = [
-    { id: 100, title: "Captain America: Brave New World", year: 2025, category: ["Action", "Marvel"], poster_url: "https://image.tmdb.org/t/p/w500/pzIddUEMWhVYrm1IURC5XirJFBp.jpg", backdrop_url: "", imdb_rating: 'N/A', rt_score: 'N/A', trailer_url: "https://www.youtube.com/embed/RZ-MiApYEkI", is_featured: false },
-    { id: 101, title: "Thunderbolts*", year: 2025, category: ["Action", "Marvel"], poster_url: "https://image.tmdb.org/t/p/w500/hI2pGIaQ5LXiWWqkb5sGTaNJL6j.jpg", backdrop_url: "", imdb_rating: 'N/A', rt_score: 'N/A', trailer_url: "https://www.youtube.com/embed/tSMU0X10CAk", is_featured: false },
-    { id: 102, title: "Mission: Impossible 8", year: 2025, category: ["Action", "Drama"], poster_url: "https://image.tmdb.org/t/p/w500/z0HJnXBYCE2r0mDqmMYKKNSiFRZ.jpg", backdrop_url: "", imdb_rating: 'N/A', rt_score: 'N/A', trailer_url: "https://www.youtube.com/embed/avz06PDqDbM", is_featured: false },
-    { id: 103, title: "Superman", year: 2025, category: ["Action", "DC"], poster_url: "https://image.tmdb.org/t/p/w500/sJhMlSJH0g6by1PyBfCMnrCNAQz.jpg", backdrop_url: "", imdb_rating: 'N/A', rt_score: 'N/A', trailer_url: "https://www.youtube.com/embed/vB3CLvUYT7c", is_featured: false },
-  ];
+// --- Data Ops ---
+function addToHistory(m) { let h = storage.get('history'); h = h.filter(x => x.id !== m.id); h.unshift({ id: m.id }); storage.set('history', h.slice(0, 50)); }
+function toggleSaved(id) { let s = storage.get('saved'); const i = s.findIndex(x => x.id === id); if (i >= 0) s.splice(i, 1); else s.unshift({ id: id }); storage.set('saved', s); showToast(i >= 0 ? 'Removed' : 'Saved'); }
+function addToDownloads(m) { let d = storage.get('downloads'); if (!d.some(x => x.id === m.id)) { d.push({ id: m.id, size: '1.2 GB' }); storage.set('downloads', d); showToast('Downloading'); } }
+function showToast(m) { const e = document.createElement('div'); e.className = 'toast show'; e.innerHTML = m; document.body.appendChild(e); setTimeout(() => { e.remove() }, 2500); }
 
-  contentArea.innerHTML = `
-    <h2 class="section-title"><i class="fas fa-rocket" style="color:#7c4dff;margin-right:8px;"></i>Coming Soon</h2>
-    <p class="section-desc">Upcoming movies to look forward to</p>
-    <div class="coming-soon-list" id="comingSoonList"></div>
-  `;
-
-  const list = document.getElementById('comingSoonList');
-  list.innerHTML = upcoming.map(movie => `
-    <div class="coming-soon-card" data-trailer="${movie.trailer_url}">
-      <div class="cs-poster">
-        ${movie.poster_url ? `<img src="${movie.poster_url}" alt="${movie.title}" />` : `<div class="poster-placeholder" style="background:linear-gradient(135deg,#2d3436,#7c4dff);">${movie.title}</div>`}
-      </div>
-      <div class="cs-info">
-        <h3>${movie.title}</h3>
-        <span class="cs-year"><i class="fas fa-calendar"></i> ${movie.year}</span>
-        <div class="cs-cats">${movie.category.map(c => `<span class="cs-cat-pill">${c}</span>`).join('')}</div>
-        <button class="watch-btn cs-trailer-btn" data-trailer="${movie.trailer_url}" data-title="${movie.title}" data-year="${movie.year}">
-          <i class="fas fa-play"></i> Watch Trailer
-        </button>
-      </div>
-    </div>
-  `).join('');
-
-  list.querySelectorAll('.cs-trailer-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      showTrailerModal({ title: btn.dataset.title, year: btn.dataset.year, imdb_rating: 'N/A', rt_score: 'N/A', category: [], trailer_url: btn.dataset.trailer });
-    });
-  });
-}
-
-// ============================================
-// PAGE: CATEGORIES
-// ============================================
-function renderCategories() {
-  const cats = ['Action', 'Comedy', 'DC', 'Disney', 'Drama', 'Family', 'Horror', 'Marvel', 'Romance'];
-  const catIcons = { Action: '💥', Comedy: '😂', DC: '🦇', Disney: '🏰', Drama: '🎭', Family: '👨‍👩‍👧‍👦', Horror: '👻', Marvel: '🦸', Romance: '💕' };
-  const catColors = { Action: '#e53935', Comedy: '#ff9800', DC: '#1a237e', Disney: '#1565c0', Drama: '#6a1b9a', Family: '#2e7d32', Horror: '#4a148c', Marvel: '#c62828', Romance: '#e91e63' };
-
-  contentArea.innerHTML = `
-    <h2 class="section-title"><i class="fas fa-filter" style="color:#2196F3;margin-right:8px;"></i>Categories</h2>
-    <p class="section-desc">Browse movies by genre</p>
-    <div class="categories-grid">
-      ${cats.map(c => {
-    const count = allMovies.filter(m => (m.category || []).includes(c)).length;
-    return `<div class="category-card" data-cat="${c}" style="background:linear-gradient(135deg,${catColors[c]}dd,${catColors[c]}88);">
-          <span class="cat-emoji">${catIcons[c]}</span>
-          <h3>${c}</h3>
-          <span class="cat-count">${count} movies</span>
-        </div>`;
-  }).join('')}
-    </div>
-    <div id="catMovieSection" style="display:none;">
-      <h2 class="section-title" id="catMovieTitle"></h2>
-      <div class="movie-grid" id="catMovieGrid"></div>
-      <button class="back-btn" id="catBackBtn"><i class="fas fa-arrow-left"></i> Back to Categories</button>
-    </div>
-  `;
-
-  contentArea.querySelectorAll('.category-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const cat = card.dataset.cat;
-      const movies = allMovies.filter(m => (m.category || []).includes(cat));
-      document.querySelector('.categories-grid').style.display = 'none';
-      document.querySelector('.section-desc').style.display = 'none';
-      const section = document.getElementById('catMovieSection');
-      section.style.display = 'block';
-      document.getElementById('catMovieTitle').textContent = cat + ' Movies';
-      renderMovieGrid(movies, 'catMovieGrid');
-      document.getElementById('catBackBtn').addEventListener('click', () => renderCategories());
-    });
-  });
-}
-
-// ============================================
-// PAGE: HISTORY
-// ============================================
-function renderHistory() {
-  const history = storage.get('history');
-  const historyMovies = history.map(h => allMovies.find(m => m.id === h.id)).filter(Boolean);
-
-  contentArea.innerHTML = `
-    <div class="page-header-row">
-      <h2 class="section-title"><i class="fas fa-clock-rotate-left" style="color:#ff9800;margin-right:8px;"></i>Watch History</h2>
-      ${history.length > 0 ? `<button class="clear-btn" id="clearHistoryBtn"><i class="fas fa-trash"></i> Clear All</button>` : ''}
-    </div>
-    <p class="section-desc">${history.length > 0 ? `${history.length} movies watched` : 'No watch history yet. Start watching movies!'}</p>
-    <div class="movie-grid" id="historyGrid"></div>
-  `;
-
-  renderMovieGrid(historyMovies, 'historyGrid');
-
-  const clearBtn = document.getElementById('clearHistoryBtn');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      if (confirm('Clear all watch history?')) { storage.set('history', []); renderHistory(); }
-    });
-  }
-}
-
-// ============================================
-// PAGE: SAVED
-// ============================================
-function renderSaved() {
-  const saved = storage.get('saved');
-  const savedMovies = saved.map(s => allMovies.find(m => m.id === s.id)).filter(Boolean);
-
-  contentArea.innerHTML = `
-    <div class="page-header-row">
-      <h2 class="section-title"><i class="fas fa-bookmark" style="color:#2196F3;margin-right:8px;"></i>Saved Movies</h2>
-      ${saved.length > 0 ? `<button class="clear-btn" id="clearSavedBtn"><i class="fas fa-trash"></i> Clear All</button>` : ''}
-    </div>
-    <p class="section-desc">${saved.length > 0 ? `${saved.length} movies saved` : 'No saved movies yet. Bookmark movies you want to watch later!'}</p>
-    <div class="movie-grid" id="savedGrid"></div>
-  `;
-
-  renderMovieGrid(savedMovies, 'savedGrid');
-
-  const clearBtn = document.getElementById('clearSavedBtn');
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      if (confirm('Clear all saved movies?')) { storage.set('saved', []); renderSaved(); }
-    });
-  }
-}
-
-// ============================================
-// PAGE: MY LIBRARY
-// ============================================
-function renderLibrary() {
-  const library = storage.get('library');
-  const libMovies = library.map(l => allMovies.find(m => m.id === l.id)).filter(Boolean);
-
-  contentArea.innerHTML = `
-    <div class="page-header-row">
-      <h2 class="section-title"><i class="fas fa-photo-film" style="color:#7c4dff;margin-right:8px;"></i>My Library</h2>
-      <button class="add-btn" id="addToLibBtn"><i class="fas fa-plus"></i> Add Movies</button>
-    </div>
-    <p class="section-desc">${library.length > 0 ? `${library.length} movies in your library` : 'Your personal movie collection is empty. Add movies from the catalog!'}</p>
-    <div class="movie-grid" id="libraryGrid"></div>
-  `;
-
-  renderMovieGrid(libMovies, 'libraryGrid');
-
-  document.getElementById('addToLibBtn').addEventListener('click', () => showAddToLibraryModal());
-}
-
-function showAddToLibraryModal() {
-  const library = storage.get('library');
-  const available = allMovies.filter(m => !library.some(l => l.id === m.id));
-
-  const modal = document.createElement('div');
-  modal.id = 'movieModal';
-  modal.className = 'modal-overlay';
-  modal.innerHTML = `
-    <div class="modal-box" style="max-width:600px;">
-      <div class="modal-header">
-        <h2>Add to My Library</h2>
-        <button class="modal-close-btn" id="closeModal">✕</button>
-      </div>
-      <div class="modal-body" style="max-height:400px;overflow-y:auto;">
-        ${available.length === 0 ? '<p style="text-align:center;color:#8b8fa3;padding:20px;">All movies are already in your library!</p>' :
-      available.map(m => `
-            <div class="lib-add-item" data-id="${m.id}">
-              <img src="${m.poster_url}" alt="${m.title}" style="width:40px;height:60px;border-radius:6px;object-fit:cover;" />
-              <div style="flex:1;"><strong>${m.title}</strong><br/><small style="color:#8b8fa3;">${m.year}</small></div>
-              <button class="add-lib-btn" data-id="${m.id}"><i class="fas fa-plus"></i></button>
-            </div>
-          `).join('')}
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-  document.body.style.overflow = 'hidden';
-
-  const close = () => { modal.remove(); document.body.style.overflow = ''; };
-  document.getElementById('closeModal').addEventListener('click', close);
-  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-
-  modal.querySelectorAll('.add-lib-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = parseInt(btn.dataset.id);
-      addToLibrary(id);
-      btn.closest('.lib-add-item').style.opacity = '0.3';
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-check"></i>';
-    });
-  });
-}
-
-// ============================================
-// PAGE: DOWNLOADS
-// ============================================
-function renderDownloads() {
-  const downloads = storage.get('downloads');
-  const dlMovies = downloads.map(d => ({ ...(allMovies.find(m => m.id === d.id) || {}), dlDate: d.date, dlSize: d.size })).filter(m => m.id);
-
-  contentArea.innerHTML = `
-    <div class="page-header-row">
-      <h2 class="section-title"><i class="fas fa-download" style="color:#4caf50;margin-right:8px;"></i>Downloads</h2>
-      ${downloads.length > 0 ? `<button class="clear-btn" id="clearDlBtn"><i class="fas fa-trash"></i> Clear All</button>` : ''}
-    </div>
-    <p class="section-desc">${downloads.length > 0 ? `${downloads.length} movies downloaded` : 'No downloads yet. Download movies to watch offline!'}</p>
-    <div class="downloads-list" id="downloadsList">
-      ${dlMovies.map(m => `
-        <div class="download-item">
-          <img src="${m.poster_url}" alt="${m.title}" />
-          <div class="dl-info">
-            <h4>${m.title}</h4>
-            <span>${m.year} • ${m.dlSize || '1.2 GB'}</span>
-            <small>Downloaded ${m.dlDate || 'recently'}</small>
-          </div>
-          <div class="dl-actions">
-            <button class="dl-play-btn" data-id="${m.id}"><i class="fas fa-play"></i></button>
-            <button class="dl-remove-btn" data-id="${m.id}"><i class="fas fa-trash"></i></button>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-
-  const clearBtn = document.getElementById('clearDlBtn');
-  if (clearBtn) clearBtn.addEventListener('click', () => { if (confirm('Clear all downloads?')) { storage.set('downloads', []); renderDownloads(); } });
-
-  contentArea.querySelectorAll('.dl-play-btn').forEach(btn => {
-    btn.addEventListener('click', () => { const m = allMovies.find(x => x.id === parseInt(btn.dataset.id)); if (m) showTrailerModal(m); });
-  });
-  contentArea.querySelectorAll('.dl-remove-btn').forEach(btn => {
-    btn.addEventListener('click', () => { removeDownload(parseInt(btn.dataset.id)); renderDownloads(); });
-  });
-}
-
-// ============================================
-// PAGE: SETTINGS
-// ============================================
-function renderSettings() {
-  const s = getSettings();
-  contentArea.innerHTML = `
-    <h2 class="section-title"><i class="fas fa-gear" style="color:#607d8b;margin-right:8px;"></i>Settings</h2>
-    <div class="settings-form">
-      <div class="settings-group">
-        <h3>Playback</h3>
-        <div class="setting-row">
-          <label>Autoplay Trailers</label>
-          <label class="toggle-switch"><input type="checkbox" id="setAutoplay" ${s.autoplay ? 'checked' : ''} /><span class="toggle-slider"></span></label>
-        </div>
-        <div class="setting-row">
-          <label>Video Quality</label>
-          <select id="setQuality" class="setting-select">
-            <option value="480p" ${s.quality === '480p' ? 'selected' : ''}>480p</option>
-            <option value="720p" ${s.quality === '720p' ? 'selected' : ''}>720p</option>
-            <option value="1080p" ${s.quality === '1080p' ? 'selected' : ''}>1080p (HD)</option>
-            <option value="4k" ${s.quality === '4k' ? 'selected' : ''}>4K Ultra HD</option>
-          </select>
-        </div>
-      </div>
-      <div class="settings-group">
-        <h3>General</h3>
-        <div class="setting-row">
-          <label>Language</label>
-          <select id="setLang" class="setting-select">
-            <option value="th" ${s.language === 'th' ? 'selected' : ''}>ไทย</option>
-            <option value="en" ${s.language === 'en' ? 'selected' : ''}>English</option>
-          </select>
-        </div>
-        <div class="setting-row">
-          <label>Notifications</label>
-          <label class="toggle-switch"><input type="checkbox" id="setNotif" ${s.notifications ? 'checked' : ''} /><span class="toggle-slider"></span></label>
-        </div>
-      </div>
-      <div class="settings-group">
-        <h3>Data</h3>
-        <div class="setting-row">
-          <label>Clear Watch History</label>
-          <button class="setting-action-btn" id="setClearHistory">Clear</button>
-        </div>
-        <div class="setting-row">
-          <label>Clear All Saved</label>
-          <button class="setting-action-btn" id="setClearSaved">Clear</button>
-        </div>
-        <div class="setting-row">
-          <label>Clear All Data</label>
-          <button class="setting-action-btn danger" id="setClearAll">Reset All</button>
-        </div>
-      </div>
-      <button class="save-settings-btn" id="saveSettingsBtn"><i class="fas fa-check"></i> Save Settings</button>
-    </div>
-  `;
-
-  document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-    saveSettings({
-      autoplay: document.getElementById('setAutoplay').checked,
-      quality: document.getElementById('setQuality').value,
-      language: document.getElementById('setLang').value,
-      notifications: document.getElementById('setNotif').checked,
-    });
-    showToast('Settings saved!');
-  });
-
-  document.getElementById('setClearHistory').addEventListener('click', () => { storage.set('history', []); showToast('History cleared'); });
-  document.getElementById('setClearSaved').addEventListener('click', () => { storage.set('saved', []); showToast('Saved cleared'); });
-  document.getElementById('setClearAll').addEventListener('click', () => {
-    if (confirm('This will clear ALL your data (history, saved, library, downloads, settings). Continue?')) {
-      ['history', 'saved', 'library', 'downloads', 'settings', 'account'].forEach(k => localStorage.removeItem('evc_' + k));
-      showToast('All data cleared');
-    }
-  });
-}
-
-// ============================================
-// PAGE: YOUR ACCOUNT
-// ============================================
-function renderAccount() {
-  const acc = getAccount();
-  contentArea.innerHTML = `
-    <h2 class="section-title"><i class="fas fa-user" style="color:#7c4dff;margin-right:8px;"></i>Your Account</h2>
-    <div class="account-card">
-      <div class="account-avatar">${acc.avatar || 'M'}</div>
-      <div class="account-form">
-        <div class="form-group">
-          <label>Display Name</label>
-          <input type="text" id="accName" value="${acc.name}" class="form-input" />
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="accEmail" value="${acc.email}" class="form-input" />
-        </div>
-        <div class="form-group">
-          <label>Avatar Letter</label>
-          <input type="text" id="accAvatar" value="${acc.avatar}" maxlength="2" class="form-input" style="width:80px;" />
-        </div>
-        <div class="account-stats">
-          <div class="stat-box"><i class="fas fa-clock-rotate-left"></i><span>${storage.get('history').length}</span><small>Watched</small></div>
-          <div class="stat-box"><i class="fas fa-bookmark"></i><span>${storage.get('saved').length}</span><small>Saved</small></div>
-          <div class="stat-box"><i class="fas fa-photo-film"></i><span>${storage.get('library').length}</span><small>Library</small></div>
-          <div class="stat-box"><i class="fas fa-download"></i><span>${storage.get('downloads').length}</span><small>Downloads</small></div>
-        </div>
-        <button class="save-settings-btn" id="saveAccBtn"><i class="fas fa-check"></i> Save Profile</button>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('saveAccBtn').addEventListener('click', () => {
-    const newAcc = { name: document.getElementById('accName').value, email: document.getElementById('accEmail').value, avatar: document.getElementById('accAvatar').value || 'M', joined: getAccount().joined };
-    saveAccount(newAcc);
-    document.querySelector('.user-avatar').textContent = newAcc.avatar;
-    showToast('Profile saved!');
-  });
-}
-
-// ============================================
-// PAGE: HELP
-// ============================================
-function renderHelp() {
-  const faqs = [
-    { q: 'How do I save a movie?', a: 'Click the bookmark icon on any movie card or use the Save button in the movie details.' },
-    { q: 'Where are my downloaded movies?', a: 'Go to Downloads in the sidebar to see all your offline movies.' },
-    { q: 'How do I change video quality?', a: 'Go to Settings → Playback → Video Quality and select your preferred resolution.' },
-    { q: 'Can I clear my watch history?', a: 'Yes, go to Settings → Data → Clear Watch History, or go to the History page and click "Clear All".' },
-    { q: 'How do categories work?', a: 'Use the Categories page to browse movies by genre. Click any category to see all movies in that genre.' },
-  ];
-
-  contentArea.innerHTML = `
-    <h2 class="section-title"><i class="fas fa-circle-question" style="color:#2196F3;margin-right:8px;"></i>Help & Information</h2>
-    <div class="help-section">
-      <h3>Frequently Asked Questions</h3>
-      <div class="faq-list">
-        ${faqs.map((f, i) => `
-          <div class="faq-item">
-            <div class="faq-q" data-idx="${i}"><span>${f.q}</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-a" id="faq-${i}">${f.a}</div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="help-info-box">
-        <h3>About EVC</h3>
-        <p>EVC (E-Video Cloud) is your personal movie streaming platform. Version 1.0</p>
-        <p>Built with HTML, CSS, JavaScript + Supabase</p>
-      </div>
-    </div>
-  `;
-
-  contentArea.querySelectorAll('.faq-q').forEach(q => {
-    q.addEventListener('click', () => {
-      const a = document.getElementById('faq-' + q.dataset.idx);
-      const open = a.classList.toggle('open');
-      q.querySelector('i').style.transform = open ? 'rotate(180deg)' : 'rotate(0)';
-    });
-  });
-}
-
-// ============================================
-// DATA OPERATIONS
-// ============================================
-function addToHistory(movie) {
-  let history = storage.get('history');
-  history = history.filter(h => h.id !== movie.id);
-  history.unshift({ id: movie.id, date: new Date().toLocaleDateString('th-TH') });
-  if (history.length > 50) history = history.slice(0, 50);
-  storage.set('history', history);
-}
-
-function toggleSaved(movieId) {
-  let saved = storage.get('saved');
-  const idx = saved.findIndex(s => s.id === movieId);
-  if (idx >= 0) { saved.splice(idx, 1); showToast('Removed from saved'); }
-  else { saved.unshift({ id: movieId, date: new Date().toLocaleDateString('th-TH') }); showToast('Saved!'); }
-  storage.set('saved', saved);
-}
-
-function addToLibrary(movieId) {
-  let library = storage.get('library');
-  if (!library.some(l => l.id === movieId)) {
-    library.push({ id: movieId, date: new Date().toLocaleDateString('th-TH') });
-    storage.set('library', library);
-    showToast('Added to library!');
-  }
-}
-
-function addToDownloads(movie) {
-  let downloads = storage.get('downloads');
-  if (!downloads.some(d => d.id === movie.id)) {
-    downloads.push({ id: movie.id, date: new Date().toLocaleDateString('th-TH'), size: (Math.random() * 2 + 0.8).toFixed(1) + ' GB' });
-    storage.set('downloads', downloads);
-    showToast('Download started!');
-  } else { showToast('Already downloaded'); }
-}
-
-function removeDownload(movieId) {
-  let downloads = storage.get('downloads');
-  downloads = downloads.filter(d => d.id !== movieId);
-  storage.set('downloads', downloads);
-  showToast('Download removed');
-}
-
-// ============================================
-// TRAILER MODAL (YouTube Embed)
-// ============================================
-function showTrailerModal(movie) {
-  const existing = document.getElementById('movieModal');
-  if (existing) existing.remove();
-
-  const saved = storage.get('saved');
-  const isSaved = saved.some(s => s.id === movie.id);
-  const categories = (movie.category || []).filter(c => c !== 'All');
-
-  const modal = document.createElement('div');
-  modal.id = 'movieModal';
-  modal.className = 'modal-overlay';
-  modal.innerHTML = `
-    <div class="modal-box trailer-modal">
-      <div class="trailer-video">
-        <iframe src="${movie.trailer_url}?autoplay=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-      </div>
-      <div class="trailer-info">
-        <div class="trailer-info-left">
-          <h2>${movie.title} <span class="trailer-year">${movie.year}</span></h2>
-          <div class="trailer-ratings">
-            <span>⭐ ${movie.imdb_rating} <small>IMDb</small></span>
-            <span>🍅 ${movie.rt_score} <small>RT</small></span>
-            ${categories.map(c => `<span class="trailer-cat">${c}</span>`).join('')}
-          </div>
-        </div>
-        <div class="trailer-actions">
-          <button class="trailer-action-btn ${isSaved ? 'saved' : ''}" id="modalSaveBtn" title="Save"><i class="fas fa-bookmark"></i></button>
-          <button class="trailer-action-btn" id="modalDownloadBtn" title="Download"><i class="fas fa-download"></i></button>
-          <button class="trailer-action-btn" id="modalLibBtn" title="Add to Library"><i class="fas fa-plus"></i></button>
-          <button class="modal-close-btn" id="closeModal">✕</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-  document.body.style.overflow = 'hidden';
-
-  const close = () => { modal.remove(); document.body.style.overflow = ''; };
-  document.getElementById('closeModal').addEventListener('click', close);
-  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-  document.addEventListener('keydown', function h(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', h); } });
-
-  if (movie.id) {
-    document.getElementById('modalSaveBtn').addEventListener('click', () => { toggleSaved(movie.id); document.getElementById('modalSaveBtn').classList.toggle('saved'); });
-    document.getElementById('modalDownloadBtn').addEventListener('click', () => addToDownloads(movie));
-    document.getElementById('modalLibBtn').addEventListener('click', () => addToLibrary(movie.id));
-  }
-}
-
-// ============================================
-// TOAST NOTIFICATION
-// ============================================
-function showToast(message) {
-  const existing = document.querySelector('.toast');
-  if (existing) existing.remove();
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 10);
-  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 2500);
-}
-
-// ============================================
-// GLOBAL EVENTS
-// ============================================
+// --- Global Events ---
 function setupGlobalEvents() {
-  // Sidebar nav
-  document.querySelectorAll('.nav-item[data-page]').forEach(item => {
-    item.addEventListener('click', () => navigateTo(item.dataset.page));
-  });
-
-  // Header shortcuts
-  document.getElementById('headerSavedBtn').addEventListener('click', () => navigateTo('saved'));
-  document.getElementById('headerHistoryBtn').addEventListener('click', () => navigateTo('history'));
-  document.getElementById('headerAvatarBtn').addEventListener('click', () => navigateTo('account'));
-
-  // Search
-  let searchTimeout;
-  searchInput.addEventListener('input', () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      if (currentPage === 'home') renderFilteredHome();
-      else { activeCategory = 'All'; navigateTo('home'); setTimeout(() => { searchInput.value = searchInput.value; renderFilteredHome(); }, 50); }
-    }, 250);
-  });
-  document.getElementById('searchBtn').addEventListener('click', () => {
-    if (currentPage !== 'home') { navigateTo('home'); setTimeout(() => { renderFilteredHome(); }, 50); }
-  });
-
-  // Mobile sidebar
-  if (mobileHamburger) mobileHamburger.addEventListener('click', () => { sidebar.classList.toggle('open'); sidebarOverlay.classList.toggle('active'); });
-  if (sidebarOverlay) sidebarOverlay.addEventListener('click', () => { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('active'); });
-
-  // Logout
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    if (confirm('Are you sure you want to log out?')) { showToast('Logged out'); setTimeout(() => navigateTo('home'), 500); }
-  });
-
-  // Load user avatar
-  const acc = getAccount();
-  document.querySelector('.user-avatar').textContent = acc.avatar || 'M';
+  document.querySelectorAll('.nav-item[data-page]').forEach(i => i.onclick = () => navigateTo(i.dataset.page));
+  document.getElementById('headerSavedBtn').onclick = () => navigateTo('saved');
+  document.getElementById('headerHistoryBtn').onclick = () => navigateTo('history');
+  document.getElementById('headerAvatarBtn').onclick = () => navigateTo('account');
+  const si = document.getElementById('searchInput'); si.oninput = () => { if (currentPage !== 'home') navigateTo('home'); renderFilteredHome(); };
+  mobileHamburger.onclick = () => { sidebar.classList.toggle('open'); sidebarOverlay.classList.toggle('active'); };
+  sidebarOverlay.onclick = () => { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('active'); };
+  document.getElementById('logoutBtn').onclick = logout;
 }
-
-// ============================================
-// START
-// ============================================
-initApp();
+checkAuthState();
