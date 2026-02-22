@@ -11,15 +11,16 @@
   --bg-surface: #0f172a;
   /* Slate 900 */
   --bg-card: rgba(30, 41, 59, 0.7);
-  /* Slate 800 with transparency */
+  /* Colors */
   --accent-emerald: #10b981;
-  /* Emerald 500 */
   --accent-emerald-hover: #059669;
-  /* Emerald 600 */
   --accent-amber: #fbbf24;
-  /* Amber 400 for ratings/stars */
+
+  --primary: var(--accent-emerald);
+  --primary-hover: var(--accent-emerald-hover);
 
   --sidebar-width: 260px;
+  --sidebar-w: var(--sidebar-width);
   --header-height: 80px;
 
   --text-primary: #f8fafc;
@@ -242,9 +243,9 @@ select {
 
 /* Header */
 .header {
-  background: rgba(2, 6, 23, 0.8);
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(12px);
-  padding: 0 40px;
+  padding: 0 30px;
   height: var(--header-height);
   display: flex;
   align-items: center;
@@ -299,7 +300,7 @@ select {
 }
 
 .search-bar .search-btn:hover {
-  background: var(--primary-blue-hover);
+  background: var(--accent-emerald-hover);
   transform: translateY(-50%) scale(1.1);
 }
 
@@ -316,7 +317,7 @@ select {
 }
 
 .search-bar .mic-btn:hover {
-  color: var(--primary-blue);
+  color: var(--accent-emerald);
 }
 
 .header-actions {
@@ -356,26 +357,12 @@ select {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* User Profile removed per user request */
 .user-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #7c4dff, var(--primary-blue));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: var(--transition);
-  border: 2px solid transparent;
+  display: none;
 }
 
-.user-avatar:hover {
-  border-color: var(--primary-blue);
-  transform: scale(1.05);
-}
-
+/* Riverside: Removed Avatar */
 /* ---------- Content ---------- */
 .content {
   padding: 24px 30px 40px;
@@ -494,7 +481,7 @@ select {
 }
 
 .watch-btn {
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
   color: white;
   padding: 10px 28px;
   border-radius: var(--border-radius-pill);
@@ -505,7 +492,7 @@ select {
 }
 
 .watch-btn:hover {
-  background: var(--primary-blue-hover);
+  background: var(--accent-emerald-hover);
   transform: scale(1.05);
   box-shadow: 0 4px 20px rgba(33, 150, 243, 0.4);
 }
@@ -534,15 +521,15 @@ select {
 }
 
 .category-pill:hover {
-  background: rgba(33, 150, 243, 0.1);
-  border-color: var(--primary-blue);
-  color: var(--primary-blue);
+  background: rgba(16, 185, 129, 0.1);
+  border-color: var(--accent-emerald);
+  color: var(--accent-emerald);
 }
 
 .category-pill.active {
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
   color: white;
-  border-color: var(--primary-blue);
+  border-color: var(--accent-emerald);
 }
 
 /* --- Movie Grid --- */
@@ -631,7 +618,7 @@ select {
 
 .card-save-btn.saved {
   opacity: 1;
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
 }
 
 .card-save-btn:hover {
@@ -760,8 +747,8 @@ select {
 }
 
 .cs-cat-pill {
-  background: rgba(33, 150, 243, 0.12);
-  color: var(--primary-blue);
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-emerald);
   padding: 3px 12px;
   border-radius: 20px;
   font-size: 11px;
@@ -970,6 +957,53 @@ select {
 
 .rating-box i:hover {
   transform: scale(1.2);
+}
+
+/* === Theme Selector UI === */
+.theme-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.theme-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.theme-card.active {
+  border-color: var(--primary);
+  background: var(--theme-glow);
+  box-shadow: 0 0 20px var(--theme-glow);
+}
+
+.theme-color-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-section h3 {
+  color: var(--primary);
+  margin-bottom: 20px;
+  font-size: 1.1rem;
 }
 
 /* --- Series Controls --- */
@@ -1258,6 +1292,28 @@ select {
   }
 }
 
+/* UI Enhancements for Themes */
+.nav-item.active i,
+.nav-item.active span,
+.category-pill.active,
+.content-tab.active,
+.detail-play-btn,
+.search-btn,
+.save-settings-btn {
+  color: #fff;
+}
+
+.nav-item.active {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--primary);
+  border-right: 3px solid var(--primary);
+}
+
+.category-card:hover {
+  border-color: var(--primary);
+  background: rgba(16, 185, 129, 0.4);
+}
+
 /* === Dynamic Discovery UI === */
 .loading-full {
   display: flex;
@@ -1423,12 +1479,12 @@ select {
 }
 
 .add-btn {
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
   color: white;
 }
 
 .add-btn:hover {
-  background: var(--primary-blue-hover);
+  background: var(--accent-emerald-hover);
 }
 
 .clear-btn i,
@@ -1507,12 +1563,12 @@ select {
 }
 
 .dl-play-btn {
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
   color: white;
 }
 
 .dl-play-btn:hover {
-  background: var(--primary-blue-hover);
+  background: var(--accent-emerald-hover);
   transform: scale(1.1);
 }
 
@@ -1577,15 +1633,15 @@ select {
 .setting-action-btn {
   padding: 6px 16px;
   border-radius: 8px;
-  background: rgba(33, 150, 243, 0.1);
-  color: var(--primary-blue);
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-emerald);
   font-size: 13px;
   font-weight: 500;
   transition: var(--transition);
 }
 
 .setting-action-btn:hover {
-  background: rgba(33, 150, 243, 0.2);
+  background: rgba(16, 185, 129, 0.2);
 }
 
 .setting-action-btn.danger {
@@ -1633,7 +1689,7 @@ select {
 }
 
 .toggle-switch input:checked+.toggle-slider {
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
 }
 
 .toggle-switch input:checked+.toggle-slider::before {
@@ -1641,7 +1697,7 @@ select {
 }
 
 .save-settings-btn {
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
   color: white;
   padding: 12px 32px;
   border-radius: var(--border-radius-pill);
@@ -1652,7 +1708,7 @@ select {
 }
 
 .save-settings-btn:hover {
-  background: var(--primary-blue-hover);
+  background: var(--accent-emerald-hover);
   transform: scale(1.03);
 }
 
@@ -1676,7 +1732,7 @@ select {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7c4dff, var(--primary-blue));
+  background: linear-gradient(135deg, #7c4dff, var(--accent-emerald));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1716,7 +1772,7 @@ select {
 }
 
 .form-input:focus {
-  border-color: var(--primary-blue);
+  border-color: var(--accent-emerald);
   background: white;
 }
 
@@ -1735,7 +1791,7 @@ select {
 }
 
 .stat-box i {
-  color: var(--primary-blue);
+  color: var(--accent-emerald);
   font-size: 16px;
   display: block;
   margin-bottom: 4px;
@@ -1950,8 +2006,8 @@ select {
 }
 
 .trailer-cat {
-  background: rgba(33, 150, 243, 0.15);
-  color: var(--primary-blue);
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-emerald);
   padding: 3px 12px;
   border-radius: 20px;
   font-size: 11px;
@@ -1983,7 +2039,7 @@ select {
 }
 
 .trailer-action-btn.saved {
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
 }
 
 /* Library add modal */
@@ -2005,7 +2061,7 @@ select {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
   color: white;
   display: flex;
   align-items: center;
@@ -2016,7 +2072,7 @@ select {
 }
 
 .add-lib-btn:hover {
-  background: var(--primary-blue-hover);
+  background: var(--accent-emerald-hover);
   transform: scale(1.1);
 }
 
@@ -2224,7 +2280,7 @@ select {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 50%, rgba(33, 150, 243, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(124, 77, 255, 0.12) 0%, transparent 50%),
     radial-gradient(circle at 50% 80%, rgba(229, 57, 53, 0.08) 0%, transparent 50%);
   animation: bgPulse 8s ease-in-out infinite alternate;
@@ -2457,8 +2513,8 @@ select {
 }
 
 .detail-cat {
-  background: rgba(33, 150, 243, 0.2);
-  color: var(--primary-blue);
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-emerald);
   padding: 4px 14px;
   border-radius: 20px;
   font-size: 12px;
@@ -2473,7 +2529,7 @@ select {
 }
 
 .detail-play-btn {
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
   color: white;
   padding: 12px 32px;
   border-radius: var(--border-radius-pill);
@@ -2486,7 +2542,7 @@ select {
 }
 
 .detail-play-btn:hover {
-  background: var(--primary-blue-hover);
+  background: var(--accent-emerald-hover);
   transform: scale(1.05);
   box-shadow: 0 4px 24px rgba(33, 150, 243, 0.5);
 }
@@ -2527,7 +2583,7 @@ select {
 }
 
 .detail-icon-btn.saved {
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
 }
 
 /* ========== PLAYER ========== */
@@ -2565,7 +2621,7 @@ select {
 }
 
 .source-btn.active {
-  background: var(--primary-blue);
+  background: var(--accent-emerald);
   color: white;
 }
 
@@ -2612,8 +2668,8 @@ select {
   gap: 6px;
   padding: 4px 14px;
   border-radius: 20px;
-  background: rgba(33, 150, 243, 0.1);
-  color: var(--primary-blue);
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-emerald);
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 14px;
