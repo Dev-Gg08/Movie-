@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EVC - E-Video Cloud | Movie Streaming</title>
+  <meta name="description"
+    content="EVC - Your personal movie streaming platform. Watch the latest movies, TV series, anime and more." />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button class="hamburger" id="hamburgerBtn"><i class="fas fa-bars"></i></button>
+        <div class="logo">
+          <div class="logo-icon">⚛</div>
+          <div class="logo-text">
+            <h2>EVC</h2>
+            <span>E- Video Cloud</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <!-- Main Nav -->
+        <div class="nav-section">
+          <div class="nav-item active" data-page="home">
+            <i class="fas fa-home"></i><span>Home</span>
+          </div>
+          <div class="nav-item" data-page="trending">
+            <i class="fas fa-fire"></i><span>Trending</span>
+          </div>
+          <div class="nav-item" data-page="coming-soon">
+            <i class="fas fa-rocket"></i><span>Coming Soon</span>
+          </div>
+          <div class="nav-item" data-page="categories">
+            <i class="fas fa-filter"></i><span>Categories</span>
+          </div>
+        </div>
+
+        <!-- Library -->
+        <div class="nav-section">
+          <div class="nav-item" data-page="history">
+            <i class="fas fa-clock-rotate-left"></i><span>History</span>
+          </div>
+          <div class="nav-item" data-page="saved">
+            <i class="fas fa-bookmark"></i><span>Saved</span>
+          </div>
+          <div class="nav-item" data-page="library">
+            <i class="fas fa-photo-film"></i><span>My Library</span>
+          </div>
+          <div class="nav-item" data-page="downloads">
+            <i class="fas fa-download"></i><span>Downloads</span>
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="nav-section">
+          <div class="nav-item" data-page="settings">
+            <i class="fas fa-gear"></i><span>Settings</span>
+          </div>
+          <div class="nav-item" data-page="account">
+            <i class="fas fa-user"></i><span>Your Account</span>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="nav-item">
+          <i class="fas fa-circle-question"></i><span>Help & Information</span>
+        </div>
+        <div class="nav-item logout">
+          <i class="fas fa-right-from-bracket"></i><span>Log Out</span>
+        </div>
+        <div class="copyright">©2025 EVC</div>
+      </div>
+    </aside>
+
+    <!-- ========== MAIN ========== -->
+    <div class="main">
+
+      <!-- Header -->
+      <header class="header">
+        <button class="mobile-hamburger" id="mobileHamburger"><i class="fas fa-bars"></i></button>
+
+        <div class="search-bar">
+          <input type="text" id="searchInput" placeholder="Search..." autocomplete="off" />
+          <button class="search-btn"><i class="fas fa-search"></i></button>
+          <button class="mic-btn"><i class="fas fa-microphone"></i></button>
+        </div>
+
+        <div class="header-actions">
+          <button class="header-action-btn">
+            <i class="fas fa-bell"></i>
+            <span class="badge"></span>
+          </button>
+          <button class="header-action-btn"><i class="fas fa-bookmark"></i></button>
+          <button class="header-action-btn"><i class="fas fa-clock-rotate-left"></i></button>
+          <div class="header-divider"></div>
+          <div class="user-avatar">M</div>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div class="content">
+
+        <!-- Content Tabs -->
+        <div class="content-tabs">
+          <button class="content-tab active" data-tab="movies">Movies</button>
+          <button class="content-tab" data-tab="tv">TV Series</button>
+          <button class="content-tab" data-tab="anime">Anime</button>
+          <button class="content-tab" data-tab="music">Music Video</button>
+        </div>
+
+        <!-- New Releases -->
+        <h2 class="section-title">New Releases</h2>
+
+        <!-- Featured movies loaded dynamically -->
+        <div class="featured-movies" id="featuredMovies">
+          <div class="featured-loading"
+            style="display:flex;align-items:center;justify-content:center;width:100%;min-height:200px;color:#1a1d29;opacity:0.4;">
+            <i class="fas fa-spinner fa-spin" style="font-size:32px;margin-right:12px;"></i> Loading...
+          </div>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="category-filter">
+          <button class="category-pill active" data-category="All">All</button>
+          <button class="category-pill" data-category="Action">Action</button>
+          <button class="category-pill" data-category="Comedy">Comedy</button>
+          <button class="category-pill" data-category="DC">DC</button>
+          <button class="category-pill" data-category="Disney">Disney</button>
+          <button class="category-pill" data-category="Drama">Drama</button>
+          <button class="category-pill" data-category="Family">Family</button>
+          <button class="category-pill" data-category="Horror">Horror</button>
+          <button class="category-pill" data-category="Marvel">Marvel</button>
+          <button class="category-pill" data-category="Romance">Romance</button>
+        </div>
+
+        <!-- Movie Grid -->
+        <div class="movie-grid" id="movieGrid">
+          <div class="featured-loading"
+            style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;padding:60px;color:#1a1d29;opacity:0.4;">
+            <i class="fas fa-spinner fa-spin" style="font-size:32px;margin-right:12px;"></i> Loading movies...
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
