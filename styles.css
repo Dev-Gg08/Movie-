@@ -846,6 +846,43 @@ select {
   margin-bottom: 12px;
   color: white;
   text-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.header-info-banner {
+  background: rgba(255, 235, 59, 0.1);
+  border: 1px solid rgba(255, 235, 59, 0.2);
+  padding: 6px 16px;
+  border-radius: 100px;
+  color: #ffeb3b;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  animation: pulse-border 3s infinite;
+}
+
+@keyframes pulse-border {
+  0% {
+    border-color: rgba(255, 235, 59, 0.2);
+  }
+
+  50% {
+    border-color: rgba(255, 235, 59, 1);
+  }
+
+  100% {
+    border-color: rgba(255, 235, 59, 0.2);
+  }
+}
+
+@media (max-width: 1200px) {
+  .header-info-banner {
+    display: none;
+    /* Hide on smaller screens to keep it clean */
+  }
 }
 
 .detail-meta {
@@ -1218,6 +1255,61 @@ select {
 
   .movie-card h4 {
     font-size: 13px;
+  }
+}
+
+/* === Dynamic Discovery UI === */
+.loading-full {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: var(--primary);
+  font-size: 1.2rem;
+  gap: 15px;
+}
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+  width: 100%;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 20px 0;
+}
+
+.category-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  padding: 40px 20px;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.category-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-5px);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.category-card h3 {
+  color: white;
+  margin: 0;
+}
+
+/* === Mobile Category Grid Fix === */
+@media (max-width: 600px) {
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
