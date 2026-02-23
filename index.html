@@ -4,165 +4,389 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dev Movie — ดูหนังออนไลน์</title>
-  <meta name="description" content="Dev Movie — แพลตฟอร์มดูหนังออนไลน์พรีเมียม ภาพยนตร์และซีรีส์กว่า 20,000 เรื่อง" />
+  <title>Dev Movie — ดูหนังออนไลน์ฟรี 20,000+ เรื่อง</title>
+  <meta name="description"
+    content="Dev Movie — แพลตฟอร์มดูหนังออนไลน์พรีเมียม ภาพยนตร์และซีรีส์กว่า 20,000 เรื่อง ซับไทย สตรีมมิ่งคุณภาพสูง" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 
 <body>
 
-  <!-- ========== SIDE NAVIGATION ========== -->
-  <aside class="side-nav" id="sideNav">
-    <div class="side-nav-top">
-      <div class="nav-brand">DM</div>
-      <button class="side-icon active" data-page="home" title="หน้าแรก">
-        <i class="fas fa-home"></i>
-      </button>
-      <button class="side-icon" data-page="search" title="ค้นหา">
-        <i class="fas fa-search"></i>
-      </button>
-      <button class="side-icon" data-page="movies" title="ภาพยนตร์">
-        <i class="fas fa-film"></i>
-      </button>
-      <button class="side-icon" data-page="series" title="ซีรีส์">
-        <i class="fas fa-tv"></i>
-      </button>
-      <button class="side-icon" data-page="saved" title="รายการโปรด">
-        <i class="fas fa-bookmark"></i>
-      </button>
-    </div>
-    <div class="side-nav-bottom">
-      <button class="side-icon" title="ตั้งค่า">
-        <i class="fas fa-gear"></i>
-      </button>
-    </div>
-  </aside>
+  <!-- ===== ANIMATED BACKGROUND ORBS ===== -->
+  <div class="bg-orbs">
+    <div class="bg-orb"></div>
+    <div class="bg-orb"></div>
+    <div class="bg-orb"></div>
+    <div class="bg-orb"></div>
+    <div class="bg-orb"></div>
+    <div class="bg-orb"></div>
+    <div class="bg-orb"></div>
+    <div class="bg-orb"></div>
+  </div>
 
-  <!-- ========== MAIN APP ========== -->
-  <div class="app-wrapper">
 
-    <!-- ========== HEADER ========== -->
+
+  <!-- ===== MAIN APP ===== -->
+  <div class="app-wrapper visible" id="appWrapper">
+
+    <!-- ===== GLASS HEADER ===== -->
     <header class="glass-header" id="mainHeader">
       <div class="header-left">
         <div class="brand-logo" id="brandLogo">
-          <span class="brand-dev">Dev</span>
-          <span class="brand-movie">Movie</span>
+          <img src="logo.svg" alt="Dev Movie" class="logo-img"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="logo-text" style="display:none"><span class="brand-dev">Dev</span><span
+              class="brand-movie">Movie</span></div>
         </div>
       </div>
-      <nav class="header-nav">
-        <a href="#" class="nav-link active" data-page="home">หน้าแรก</a>
-        <a href="#" class="nav-link" data-page="movies">ภาพยนตร์</a>
-        <a href="#" class="nav-link" data-page="series">ซีรีส์</a>
-        <a href="#" class="nav-link" data-page="cartoons">การ์ตูน</a>
-        <a href="#" class="nav-link" data-page="trending">กำลังฮิต</a>
-      </nav>
+
+      <div class="header-center">
+        <div class="nav-search-hub">
+          <nav class="header-nav" id="headerNav">
+            <button class="nav-item active" data-page="home"><i class="fas fa-home"></i> <span
+                data-i18n="nav_home">หน้าแรก</span></button>
+            <button class="nav-item" data-page="movies"><i class="fas fa-film"></i> <span
+                data-i18n="nav_movies">ภาพยนตร์</span></button>
+            <button class="nav-item" data-page="series"><i class="fas fa-tv"></i> <span
+                data-i18n="nav_series">ซีรีส์</span></button>
+            <button class="nav-item" data-page="favorites"><i class="fas fa-heart"></i> <span
+                data-i18n="nav_favorites">โปรด</span></button>
+          </nav>
+          <div class="search-glass" id="searchGlass">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" data-i18n-placeholder="search_placeholder"
+              placeholder="ค้นหาหนัง ซีรีส์..." autocomplete="off" />
+            <div class="search-dropdown" id="searchDropdown"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="header-right">
-        <div class="search-glass" id="searchBox">
-          <i class="fas fa-search"></i>
-          <input type="text" id="searchInput" placeholder="ค้นหาหนัง ซีรีส์..." autocomplete="off" />
-        </div>
-        <div class="notification-icon">
-          <i class="fas fa-bell"></i>
-          <span class="notif-dot"></span>
-        </div>
-        <div class="user-avatar">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png" alt="User" />
-        </div>
+        <button class="glass-circle-btn lang-btn" id="langToggleHeader" title="TH/EN">
+          <span class="lang-label" id="langLabel">TH</span>
+        </button>
+        <button class="glass-circle-btn" title="แจ้งเตือน"><i class="fas fa-bell"></i></button>
       </div>
     </header>
 
-    <!-- ========== CONTENT ========== -->
+    <!-- ===== HOME CONTENT ===== -->
     <main class="main-content" id="mainContent">
 
-      <!-- Hero Billboard -->
+      <!-- Hero -->
       <section class="hero-billboard" id="heroBillboard">
         <div class="hero-skeleton shimmer"></div>
       </section>
 
-      <!-- Quick Category Row -->
-      <section class="category-row" id="categoryRow">
+      <!-- Trending -->
+      <section class="category-row" id="trendingSection">
         <div class="category-header">
-          <h2 class="section-heading">🔥 กำลังฮิตตอนนี้</h2>
-          <button class="see-all-btn" data-page="trending">ดูทั้งหมด <i class="fas fa-chevron-right"></i></button>
+          <h2 class="section-heading" data-i18n="sec_trending">🔥 กำลังฮิตตอนนี้</h2>
+          <button class="see-all-btn" data-page="trending" data-i18n="see_all">ดูทั้งหมด <i
+              class="fas fa-chevron-right"></i></button>
         </div>
-        <div class="horizontal-carousel" id="trendingRow"></div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="trendingRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- Top 10 Today -->
+      <section class="category-row" id="top10Section">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_top10">🏆 Top 10 วันนี้ในประเทศไทย</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="top10Row"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
       </section>
 
       <!-- Popular Movies -->
       <section class="category-row" id="popularSection">
         <div class="category-header">
-          <h2 class="section-heading">⭐ ภาพยนตร์ยอดนิยม</h2>
-          <button class="see-all-btn" data-page="movies">ดูทั้งหมด <i class="fas fa-chevron-right"></i></button>
+          <h2 class="section-heading" data-i18n="sec_popular">⭐ ภาพยนตร์ยอดนิยม</h2>
+          <button class="see-all-btn" data-page="movies" data-i18n="see_all">ดูทั้งหมด <i
+              class="fas fa-chevron-right"></i></button>
         </div>
-        <div class="horizontal-carousel" id="popularRow"></div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="popularRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
       </section>
 
-      <!-- Top Rated TV -->
+      <!-- Action -->
+      <section class="category-row" id="actionSection">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_action">💥 แอคชั่นระเบิด</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="actionRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- TV -->
       <section class="category-row" id="tvSection">
         <div class="category-header">
-          <h2 class="section-heading">📺 ซีรีส์ยอดนิยม</h2>
-          <button class="see-all-btn" data-page="series">ดูทั้งหมด <i class="fas fa-chevron-right"></i></button>
+          <h2 class="section-heading" data-i18n="sec_tv">📺 ซีรีส์ยอดนิยม</h2>
+          <button class="see-all-btn" data-page="series" data-i18n="see_all">ดูทั้งหมด <i
+              class="fas fa-chevron-right"></i></button>
         </div>
-        <div class="horizontal-carousel" id="tvRow"></div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="tvRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
       </section>
 
-      <!-- Mid Billboard -->
+      <!-- Mid Hero -->
       <section class="mid-billboard" id="midBillboard"></section>
 
-      <!-- Genre Filter Section -->
-      <section class="filter-bar" id="filterBar">
-        <div class="filter-tabs-row">
-          <button class="filter-chip active" data-filter="all">ทั้งหมด</button>
-          <button class="filter-chip" data-filter="28">แอคชั่น</button>
-          <button class="filter-chip" data-filter="35">ตลก</button>
-          <button class="filter-chip" data-filter="27">สยองขวัญ</button>
-          <button class="filter-chip" data-filter="10749">โรแมนติก</button>
-          <button class="filter-chip" data-filter="878">ไซไฟ</button>
-          <button class="filter-chip" data-filter="16">แอนิเมชั่น</button>
-          <button class="filter-chip" data-filter="18">ดราม่า</button>
-          <button class="filter-chip" data-filter="53">ระทึกขวัญ</button>
+      <!-- Comedy -->
+      <section class="category-row" id="comedySection">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_comedy">😂 ตลกฮาๆ</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="comedyRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
         </div>
       </section>
 
-      <!-- Grid Result -->
+      <!-- Horror -->
+      <section class="category-row" id="horrorSection">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_horror">👻 สยองขวัญ</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="horrorRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- Animation -->
+      <section class="category-row" id="animationSection">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_animation">🎨 แอนิเมชั่น</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="animationRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- Sci-Fi -->
+      <section class="category-row" id="scifiSection">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_scifi">🚀 ไซไฟ & แฟนตาซี</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="scifiRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- Romance -->
+      <section class="category-row" id="romanceSection">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_romance">💕 โรแมนติก</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="romanceRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- Top Rated -->
+      <section class="category-row" id="topRatedSection">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_toprated">🎖️ เรตติ้งสูงสุดตลอดกาล</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="topRatedRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- Thriller -->
+      <section class="category-row" id="thrillerSection">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_thriller">🔪 ระทึกขวัญ</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="thrillerRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- Documentary -->
+      <section class="category-row" id="docSection">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_doc">🎓 สารคดี</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="docRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- War -->
+      <section class="category-row" id="warSection">
+        <div class="category-header">
+          <h2 class="section-heading" data-i18n="sec_war">⚔️ สงคราม</h2>
+        </div>
+        <div class="carousel-wrap">
+          <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+          <div class="horizontal-carousel" id="warRow"></div>
+          <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </section>
+
+      <!-- Genre Filter -->
+      <section class="filter-bar" id="filterBar">
+        <div class="filter-tabs-row">
+          <button class="filter-chip active" data-filter="all" data-i18n="filter_all">ทั้งหมด</button>
+          <button class="filter-chip" data-filter="28" data-i18n="filter_action">แอคชั่น</button>
+          <button class="filter-chip" data-filter="35" data-i18n="filter_comedy">ตลก</button>
+          <button class="filter-chip" data-filter="27" data-i18n="filter_horror">สยองขวัญ</button>
+          <button class="filter-chip" data-filter="10749" data-i18n="filter_romance">โรแมนติก</button>
+          <button class="filter-chip" data-filter="878" data-i18n="filter_scifi">ไซไฟ</button>
+          <button class="filter-chip" data-filter="16" data-i18n="filter_animation">แอนิเมชั่น</button>
+          <button class="filter-chip" data-filter="18" data-i18n="filter_drama">ดราม่า</button>
+          <button class="filter-chip" data-filter="53" data-i18n="filter_thriller">ระทึกขวัญ</button>
+          <button class="filter-chip" data-filter="80" data-i18n="filter_crime">อาชญากรรม</button>
+          <button class="filter-chip" data-filter="10752" data-i18n="filter_war">สงคราม</button>
+          <button class="filter-chip" data-filter="14" data-i18n="filter_fantasy">แฟนตาซี</button>
+          <button class="filter-chip" data-filter="9648" data-i18n="filter_mystery">ลึกลับ</button>
+          <button class="filter-chip" data-filter="99" data-i18n="filter_doc">สารคดี</button>
+          <button class="filter-chip" data-filter="36" data-i18n="filter_history">ประวัติศาสตร์</button>
+        </div>
+      </section>
+
+      <!-- Grid -->
       <section class="content-grid" id="gridContent"></section>
 
       <!-- Load More -->
       <div class="load-more-wrap" id="loadMoreWrap">
-        <button class="glass-btn load-more-btn" id="loadMoreBtn">
-          <i class="fas fa-plus"></i> โหลดเพิ่มเติม
-        </button>
+        <button class="glass-btn" id="loadMoreBtn"><i class="fas fa-plus"></i> <span
+            data-i18n="load_more">โหลดเพิ่มเติม</span></button>
         <p class="movie-count" id="movieCount"></p>
       </div>
-
     </main>
 
-    <!-- ========== FOOTER ========== -->
-    <footer class="glass-footer">
-      <div class="footer-brand">
-        <span class="brand-dev">Dev</span><span class="brand-movie">Movie</span>
+    <!-- ===== WATCH PAGE ===== -->
+    <section class="watch-page" id="watchPage">
+      <div class="watch-inner">
+        <button class="back-btn" id="backFromWatch" data-i18n="back_home"><i class="fas fa-arrow-left"></i>
+          กลับหน้าแรก</button>
+        <div class="watch-hero-glass" id="watchHero"></div>
+
+        <!-- Source Selector -->
+        <div class="watch-controls">
+          <div class="source-tabs glass-panel" id="sourceTabs">
+            <span class="source-label" data-i18n="server">เซิร์ฟเวอร์:</span>
+            <button class="source-tab active" data-source="vidsrcto">1. เวิลด์ (ซับไทย)</button>
+            <button class="source-tab" data-source="vidsrcme">2. ยูนิเวอร์แซล (พากย์ไทย)</button>
+            <button class="source-tab" data-source="embedsu">3. อัลตร้า (พากย์ไทย/ซับ)</button>
+            <button class="source-tab" data-source="multiembed">4. มัลติ (พากย์ไทย/ซับ)</button>
+            <button class="source-tab" data-source="superembed">5. วีไอพี (พากย์ไทย/ซับ)</button>
+            <button class="source-tab" data-source="smashystream">6. พรีเมียม (พากย์ไทย/ซับ)</button>
+            <button class="source-tab" data-source="autoembed">7. สปีด (พากย์ไทย/ซับ)</button>
+          </div>
+        </div>
+
+        <!-- Video Player -->
+        <div class="video-wrap glass-panel" id="videoContainer">
+          <iframe id="videoFrame" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"
+            frameborder="0"></iframe>
+        </div>
+
+        <!-- Episode Selector (TV shows) -->
+        <div class="episode-panel glass-panel" id="episodePanel" style="display:none">
+          <div class="episode-header">
+            <h3 data-i18n="episodes">ตอนทั้งหมด</h3>
+            <div class="season-selector">
+              <label data-i18n="season">ซีซั่น</label>
+              <select class="glass-select" id="seasonSelect"></select>
+            </div>
+          </div>
+          <div class="episode-grid" id="episodeGrid"></div>
+        </div>
+
+        <!-- Collection / Sequels -->
+        <div class="collection-panel" id="collectionPanel" style="display:none">
+          <h3 class="section-heading" id="collectionTitle"></h3>
+          <div class="carousel-wrap">
+            <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+            <div class="horizontal-carousel" id="collectionRow"></div>
+            <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+          </div>
+        </div>
+
+        <!-- Similar -->
+        <div class="watch-similar" id="watchSimilar">
+          <h3 class="section-heading" data-i18n="similar">🎬 เนื้อหาที่คล้ายกัน</h3>
+          <div class="carousel-wrap">
+            <button class="carousel-arrow left"><i class="fas fa-chevron-left"></i></button>
+            <div class="horizontal-carousel" id="similarRow"></div>
+            <button class="carousel-arrow right"><i class="fas fa-chevron-right"></i></button>
+          </div>
+        </div>
       </div>
-      <p class="footer-text">ภาพยนตร์และซีรีส์กว่า 20,000+ เรื่อง • สตรีมมิ่งคุณภาพสูง</p>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="glass-footer">
+      <div class="footer-brand"><span class="brand-dev">Dev</span><span class="brand-movie">Movie</span></div>
+      <p class="footer-text" data-i18n="footer_text">ภาพยนตร์และซีรีส์กว่า 20,000+ เรื่อง • ซับไทย • สตรีมมิ่งคุณภาพสูง
+        • อัปเดททุกวัน</p>
       <div class="footer-links">
-        <a href="#">เกี่ยวกับเรา</a>
-        <a href="#">ติดต่อ</a>
-        <a href="#">ข้อกำหนด</a>
-        <a href="#">ความเป็นส่วนตัว</a>
+        <a href="#" data-i18n="about">เกี่ยวกับเรา</a><a href="#" data-i18n="contact">ติดต่อ</a><a href="#"
+          data-i18n="terms">ข้อกำหนด</a><a href="#" data-i18n="privacy">ความเป็นส่วนตัว</a>
       </div>
       <p class="footer-copy">© 2026 Dev Movie. All rights reserved.</p>
     </footer>
-
   </div>
 
-  <!-- ========== MODAL ========== -->
-  <div class="modal-overlay" id="movieModal" style="display:none">
+  <!-- ===== MODAL ===== -->
+  <div class="modal-overlay" id="movieModal">
     <div class="modal-glass" id="modalContent"></div>
   </div>
+
+  <!-- ===== BACK TO TOP ===== -->
+  <button class="back-to-top" id="backToTop" title="กลับด้านบน"><i class="fas fa-chevron-up"></i></button>
+
+  <!-- ===== MOBILE NAV ===== -->
+  <nav class="mobile-nav" id="mobileNav">
+    <div class="mobile-nav-inner">
+      <button class="mobile-nav-btn active" data-page="home"><i class="fas fa-home"></i><span
+          data-i18n="nav_home">หน้าแรก</span></button>
+      <button class="mobile-nav-btn" data-page="search"><i class="fas fa-search"></i><span
+          data-i18n="nav_search">ค้นหา</span></button>
+      <button class="mobile-nav-btn" data-page="movies"><i class="fas fa-film"></i><span
+          data-i18n="nav_movies">ภาพยนตร์</span></button>
+      <button class="mobile-nav-btn" data-page="series"><i class="fas fa-tv"></i><span
+          data-i18n="nav_series">ซีรีส์</span></button>
+      <button class="mobile-nav-btn" data-page="favorites"><i class="fas fa-heart"></i><span
+          data-i18n="nav_favorites">โปรด</span></button>
+    </div>
+  </nav>
 
   <script src="script.js"></script>
 </body>
