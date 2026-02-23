@@ -4,122 +4,164 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EVC - Ultimate Movies & Series</title>
-  <meta name="description"
-    content="EVC - Your premium streaming platform. Watch movies and series with the best experience." />
+  <title>Dev Movie — ดูหนังออนไลน์</title>
+  <meta name="description" content="Dev Movie — แพลตฟอร์มดูหนังออนไลน์พรีเมียม ภาพยนตร์และซีรีส์กว่า 20,000 เรื่อง" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
     rel="stylesheet">
-  <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 
 <body>
 
-  <!-- ========== APP CONTAINER ========== -->
-  <div class="app" id="appContainer">
-
-    <!-- Sidebar Overlay (mobile) -->
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-    <!-- ========== SIDEBAR ========== -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <div class="logo">
-          <div class="logo-icon">
-            <i class="fas fa-play-circle"></i>
-          </div>
-          <div class="logo-text">
-            <h2>EVC</h2>
-            <span>E-Video Cloud</span>
-          </div>
-        </div>
-        <button class="hamburger-close" id="hamburgerBtn"><i class="fas fa-times"></i></button>
-      </div>
-
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <span class="section-title">Explore</span>
-          <div class="nav-item active" data-page="home">
-            <i class="fas fa-home"></i><span>Home</span>
-          </div>
-          <div class="nav-item" data-page="trending">
-            <i class="fas fa-fire"></i><span>Trending</span>
-          </div>
-          <div class="nav-item" data-page="series">
-            <i class="fas fa-tv"></i><span>Series</span>
-          </div>
-          <div class="nav-item" data-page="coming-soon">
-            <i class="fas fa-rocket"></i><span>Coming Soon</span>
-          </div>
-          <div class="nav-item" data-page="categories">
-            <i class="fas fa-th-large"></i><span>Categories</span>
-          </div>
-        </div>
-
-        <div class="nav-section">
-          <span class="section-title">Library</span>
-          <div class="nav-item" data-page="history">
-            <i class="fas fa-clock-rotate-left"></i><span>History</span>
-          </div>
-          <div class="nav-item" data-page="saved">
-            <i class="fas fa-bookmark"></i><span>Saved</span>
-          </div>
-          <div class="nav-item" data-page="library">
-            <i class="fas fa-photo-film"></i><span>My Library</span>
-          </div>
-          <div class="nav-item" data-page="downloads">
-            <i class="fas fa-download"></i><span>Downloads</span>
-          </div>
-        </div>
-
-        <div class="nav-section">
-          <span class="section-title">System</span>
-          <div class="nav-item" data-page="settings">
-            <i class="fas fa-gear"></i><span>Settings</span>
-          </div>
-        </div>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="nav-item" data-page="help">
-          <i class="fas fa-circle-question"></i><span>Help</span>
-        </div>
-        <div class="copyright">©2026 EVC Premium</div>
-      </div>
-    </aside>
-
-    <!-- ========== MAIN CONTENT ========== -->
-    <div class="main">
-
-      <!-- Header -->
-      <header class="header">
-        <button class="mobile-hamburger" id="mobileHamburger"><i class="fas fa-bars"></i></button>
-
-        <div class="search-bar">
-          <i class="fas fa-search"></i>
-          <input type="text" id="searchInput" placeholder="Search movies, series..." autocomplete="off" />
-          <button class="search-btn" id="searchBtn">Search</button>
-        </div>
-
-        <div class="header-info-banner">
-          <span>Exploring 20,000+ Movies & Series</span>
-        </div>
-        <div class="header-actions">
-          <button class="header-action-btn" id="headerSavedBtn" title="Saved"><i class="fas fa-bookmark"></i></button>
-          <button class="header-action-btn" id="headerHistoryBtn" title="History"><i
-              class="fas fa-clock-rotate-left"></i></button>
-        </div>
-      </header>
-      <!-- Dynamic Content Area -->
-      <div class="content" id="contentArea">
-        <!-- SPA content rendered here -->
-      </div>
-
+  <!-- ========== SIDE NAVIGATION ========== -->
+  <aside class="side-nav" id="sideNav">
+    <div class="side-nav-top">
+      <div class="nav-brand">DM</div>
+      <button class="side-icon active" data-page="home" title="หน้าแรก">
+        <i class="fas fa-home"></i>
+      </button>
+      <button class="side-icon" data-page="search" title="ค้นหา">
+        <i class="fas fa-search"></i>
+      </button>
+      <button class="side-icon" data-page="movies" title="ภาพยนตร์">
+        <i class="fas fa-film"></i>
+      </button>
+      <button class="side-icon" data-page="series" title="ซีรีส์">
+        <i class="fas fa-tv"></i>
+      </button>
+      <button class="side-icon" data-page="saved" title="รายการโปรด">
+        <i class="fas fa-bookmark"></i>
+      </button>
     </div>
+    <div class="side-nav-bottom">
+      <button class="side-icon" title="ตั้งค่า">
+        <i class="fas fa-gear"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ========== MAIN APP ========== -->
+  <div class="app-wrapper">
+
+    <!-- ========== HEADER ========== -->
+    <header class="glass-header" id="mainHeader">
+      <div class="header-left">
+        <div class="brand-logo" id="brandLogo">
+          <span class="brand-dev">Dev</span>
+          <span class="brand-movie">Movie</span>
+        </div>
+      </div>
+      <nav class="header-nav">
+        <a href="#" class="nav-link active" data-page="home">หน้าแรก</a>
+        <a href="#" class="nav-link" data-page="movies">ภาพยนตร์</a>
+        <a href="#" class="nav-link" data-page="series">ซีรีส์</a>
+        <a href="#" class="nav-link" data-page="cartoons">การ์ตูน</a>
+        <a href="#" class="nav-link" data-page="trending">กำลังฮิต</a>
+      </nav>
+      <div class="header-right">
+        <div class="search-glass" id="searchBox">
+          <i class="fas fa-search"></i>
+          <input type="text" id="searchInput" placeholder="ค้นหาหนัง ซีรีส์..." autocomplete="off" />
+        </div>
+        <div class="notification-icon">
+          <i class="fas fa-bell"></i>
+          <span class="notif-dot"></span>
+        </div>
+        <div class="user-avatar">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Netflix-avatar.png" alt="User" />
+        </div>
+      </div>
+    </header>
+
+    <!-- ========== CONTENT ========== -->
+    <main class="main-content" id="mainContent">
+
+      <!-- Hero Billboard -->
+      <section class="hero-billboard" id="heroBillboard">
+        <div class="hero-skeleton shimmer"></div>
+      </section>
+
+      <!-- Quick Category Row -->
+      <section class="category-row" id="categoryRow">
+        <div class="category-header">
+          <h2 class="section-heading">🔥 กำลังฮิตตอนนี้</h2>
+          <button class="see-all-btn" data-page="trending">ดูทั้งหมด <i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="horizontal-carousel" id="trendingRow"></div>
+      </section>
+
+      <!-- Popular Movies -->
+      <section class="category-row" id="popularSection">
+        <div class="category-header">
+          <h2 class="section-heading">⭐ ภาพยนตร์ยอดนิยม</h2>
+          <button class="see-all-btn" data-page="movies">ดูทั้งหมด <i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="horizontal-carousel" id="popularRow"></div>
+      </section>
+
+      <!-- Top Rated TV -->
+      <section class="category-row" id="tvSection">
+        <div class="category-header">
+          <h2 class="section-heading">📺 ซีรีส์ยอดนิยม</h2>
+          <button class="see-all-btn" data-page="series">ดูทั้งหมด <i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="horizontal-carousel" id="tvRow"></div>
+      </section>
+
+      <!-- Mid Billboard -->
+      <section class="mid-billboard" id="midBillboard"></section>
+
+      <!-- Genre Filter Section -->
+      <section class="filter-bar" id="filterBar">
+        <div class="filter-tabs-row">
+          <button class="filter-chip active" data-filter="all">ทั้งหมด</button>
+          <button class="filter-chip" data-filter="28">แอคชั่น</button>
+          <button class="filter-chip" data-filter="35">ตลก</button>
+          <button class="filter-chip" data-filter="27">สยองขวัญ</button>
+          <button class="filter-chip" data-filter="10749">โรแมนติก</button>
+          <button class="filter-chip" data-filter="878">ไซไฟ</button>
+          <button class="filter-chip" data-filter="16">แอนิเมชั่น</button>
+          <button class="filter-chip" data-filter="18">ดราม่า</button>
+          <button class="filter-chip" data-filter="53">ระทึกขวัญ</button>
+        </div>
+      </section>
+
+      <!-- Grid Result -->
+      <section class="content-grid" id="gridContent"></section>
+
+      <!-- Load More -->
+      <div class="load-more-wrap" id="loadMoreWrap">
+        <button class="glass-btn load-more-btn" id="loadMoreBtn">
+          <i class="fas fa-plus"></i> โหลดเพิ่มเติม
+        </button>
+        <p class="movie-count" id="movieCount"></p>
+      </div>
+
+    </main>
+
+    <!-- ========== FOOTER ========== -->
+    <footer class="glass-footer">
+      <div class="footer-brand">
+        <span class="brand-dev">Dev</span><span class="brand-movie">Movie</span>
+      </div>
+      <p class="footer-text">ภาพยนตร์และซีรีส์กว่า 20,000+ เรื่อง • สตรีมมิ่งคุณภาพสูง</p>
+      <div class="footer-links">
+        <a href="#">เกี่ยวกับเรา</a>
+        <a href="#">ติดต่อ</a>
+        <a href="#">ข้อกำหนด</a>
+        <a href="#">ความเป็นส่วนตัว</a>
+      </div>
+      <p class="footer-copy">© 2026 Dev Movie. All rights reserved.</p>
+    </footer>
+
+  </div>
+
+  <!-- ========== MODAL ========== -->
+  <div class="modal-overlay" id="movieModal" style="display:none">
+    <div class="modal-glass" id="modalContent"></div>
   </div>
 
   <script src="script.js"></script>

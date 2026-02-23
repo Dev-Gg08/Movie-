@@ -1,340 +1,519 @@
-// ============================================
-// EVC - Movie Streaming Website
-// Dynamic Discovery & Global Search
-// ============================================
+// ==================================================
+// DEV MOVIE — Complete Streaming Platform Logic
+// ==================================================
 
-const SUPABASE_URL = 'https://xhoiouzraqoyvevbxefj.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_K3hyy5i7tZ5J9Z4WtTop1g_ZFAW06R5';
-const TMDB_API_KEY = 'e226f4a5f5bace766952aa0d17182959';
+const TMDB_KEY = 'e226f4a5f5bace766952aa0d17182959';
+const IMG_BASE = 'https://image.tmdb.org/t/p/';
+const poster = (p) => p ? `${IMG_BASE}w500${p}` : 'https://placehold.co/300x450/1a1a2e/666?text=No+Image';
+const backdrop = (p) => p ? `${IMG_BASE}original${p}` : '';
 
-let supabaseClient = null;
-let allMovies = [];
-let currentPageNum = 1;
-let currentCategory = 'All';
-let currentTab = 'movies';
-let searchResults = [];
-let isLoading = false;
-
-// TMDB Genre IDs mapping
-const GENRE_MAP = {
-  "Action": 28,
-  "Adventure": 12,
-  "Animation": 16,
-  "Comedy": 35,
-  "Crime": 80,
-  "Drama": 18,
-  "Fantasy": 14,
-  "Horror": 27,
-  "Sci-Fi": 878,
-  "Romance": 10749,
-  "Anime": 16,
-  "Marvel": "marvel",
+// ========== STATE ==========
+let state = {
+  page: 1,
+  totalPages: 1,
+  endpoint: 'trending/all/day',
+  params: {},
+  loadedCount: 0,
+  currentView: 'home',
+  activeGenre: 'all'
 };
 
-// --- Embed Sources ---
-const EMBED_SOURCES = [
-  { name: 'VidSrc', movie: id => `https://vidsrc.xyz/embed/movie/${id}`, tv: (id, s, e) => `https://vidsrc.xyz/embed/tv/${id}/${s}/${e}` },
-  { name: '2Embed', movie: id => `https://www.2embed.cc/embed/${id}`, tv: (id, s, e) => `https://www.2embed.cc/embedtv/${id}&s=${s}&e=${e}` },
-  { name: 'VidSrc.to', movie: id => `https://vidsrc.to/embed/movie/${id}`, tv: (id, s, e) => `https://vidsrc.to/embed/tv/${id}/${s}/${e}` },
-];
+// ========== DOM CACHE ==========
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
 
-// --- Storage ---
-const storage = {
-  get(key) { try { return JSON.parse(localStorage.getItem('evc_' + key)) || []; } catch { return []; } },
-  set(key, val) { localStorage.setItem('evc_' + key, JSON.stringify(val)); },
-  getObj(key) { try { return JSON.parse(localStorage.getItem('evc_' + key)) || {}; } catch { return {}; } },
-  setObj(key, val) { localStorage.setItem('evc_' + key, JSON.stringify(val)); },
-  getVal(key, def) { return localStorage.getItem('evc_' + key) || def; },
-  setVal(key, val) { localStorage.setItem('evc_' + key, val); }
-};
-
-const social = {
-  getRating(id) { return storage.getObj('ratings')[id] || 0; },
-  setRating(id, val) { const r = storage.getObj('ratings'); r[id] = val; storage.setObj('ratings', r); },
-  getComments(id) { return storage.getObj('comments')[id] || []; },
-  addComment(id, text) {
-    const c = storage.getObj('comments');
-    if (!c[id]) c[id] = [];
-    c[id].unshift({ user: 'You', text, date: 'Just now' });
-    storage.setObj('comments', c);
+// ========== TMDB API ==========
+async function tmdb(endpoint, params = {}) {
+  const q = new URLSearchParams({ api_key: TMDB_KEY, language: 'th-TH', region: 'TH', ...params });
+  try {
+    const r = await fetch(`https://api.themoviedb.org/3/${endpoint}?${q}`);
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch (e) {
+    console.error('TMDB Error:', e);
+    return { results: [], total_pages: 0 };
   }
-};
-
-// --- TMDB Data Fetching ---
-const tmdbPoster = (path) => path ? `https://image.tmdb.org/t/p/w500${path}` : null;
-const tmdbBackdrop = (path) => path ? `https://image.tmdb.org/t/p/original${path}` : null;
-
-async function fetchTMDB(endpoint, params = {}) {
-  const urlParams = new URLSearchParams({ api_key: TMDB_API_KEY, language: 'th-TH', ...params });
-  const res = await fetch(`https://api.themoviedb.org/3/${endpoint}?${urlParams.toString()}`);
-  return res.json();
 }
 
-function mapResult(r, type = 'movie') {
+function mapMovie(r, type) {
+  const t = type || r.media_type || 'movie';
   return {
     id: r.id,
-    tmdb_id: r.id,
-    title: r.title || r.name,
-    year: (r.release_date || r.first_air_date || '').split('-')[0],
-    type: type,
-    poster_url: tmdbPoster(r.poster_path),
-    backdrop_url: tmdbBackdrop(r.backdrop_path),
-    imdb_rating: r.vote_average ? r.vote_average.toFixed(1) : 'N/A',
-    rt_score: 'N/A',
-    seasons: type === 'tv' ? [{ num: 1, ep: 10 }] : []
+    title: r.title || r.name || 'ไม่ทราบชื่อ',
+    desc: r.overview || '',
+    year: (r.release_date || r.first_air_date || '').split('-')[0] || '—',
+    type: t,
+    poster: poster(r.poster_path),
+    backdrop: backdrop(r.backdrop_path),
+    rating: r.vote_average ? r.vote_average.toFixed(1) : '—',
+    genres: r.genre_ids || (r.genres || []).map(g => g.id)
   };
 }
 
-async function discoverContent(page = 1, category = 'All', tab = 'movies') {
-  isLoading = true;
-  let endpoint = tab === 'movies' ? 'discover/movie' : 'discover/tv';
-  let params = { page, sort_by: 'popularity.desc' };
-
-  if (category === 'Thai Movies') { params.with_original_language = 'th'; }
-  else if (category === 'Marvel') { params.with_keywords = '180547'; }
-  else if (GENRE_MAP[category]) { params.with_genres = GENRE_MAP[category]; }
-
-  const data = await fetchTMDB(endpoint, params);
-  const results = (data.results || []).map(r => mapResult(r, tab === 'movies' ? 'movie' : 'tv'));
-
-  if (page === 1) allMovies = results;
-  else allMovies = [...allMovies, ...results];
-
-  isLoading = false;
-  return results;
-}
-
-// --- APP CORE ---
-
-function initApp() {
-  if (typeof window.supabase !== 'undefined') {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  }
-  setupGlobalEvents();
-  navigateTo('home');
-}
-
-async function navigateTo(page) {
-  currentPageNum = 1;
-  const pages = {
-    home: renderHome,
-    trending: renderTrending,
-    series: () => { currentTab = 'series'; currentCategory = 'All'; renderHome(); },
-    'coming-soon': renderComingSoon,
-    categories: renderCategories,
-    history: () => renderStaticList("History", storage.get('history')),
-    saved: () => renderStaticList("Saved", storage.get('saved')),
-    settings: renderSettings,
-    help: renderHelp
-  };
-
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
-  if (window.innerWidth <= 1024) { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('active'); }
-
-  (pages[page] || renderHome)();
-}
-
-async function renderHome() {
-  contentArea.innerHTML = `<div class="loading-full"><i class="fas fa-spinner fa-spin"></i> Discovering...</div>`;
-  await discoverContent(1, currentCategory, currentTab);
-
-  contentArea.innerHTML = `
-    <div class="content-tabs">
-      <button class="content-tab ${currentTab === 'movies' ? 'active' : ''}" onclick="setTab('movies')">Movies</button>
-      <button class="content-tab ${currentTab === 'series' ? 'active' : ''}" onclick="setTab('series')">Series</button>
-    </div>
-
-    <div class="category-filter">
-      ${['All', 'Thai Movies', 'Action', 'Sci-Fi', 'Drama', 'Crime', 'Horror', 'Comedy'].map(c => `
-        <button class="category-pill ${currentCategory === c ? 'active' : ''}" onclick="setCategory('${c}')">${c}</button>
-      `).join('')}
-    </div>
-
-    <div class="movie-grid" id="mainGrid"></div>
-    <div class="load-more-container"><button id="loadMoreBtn" class="detail-play-btn" style="width:200px">Load More Content</button></div>
-  `;
-
-  updateGrid();
-  document.getElementById('loadMoreBtn').onclick = async () => {
-    currentPageNum++;
-    const btn = document.getElementById('loadMoreBtn');
-    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Loading...`;
-    const newItems = await discoverContent(currentPageNum, currentCategory, currentTab);
-    appendGrid(newItems);
-    btn.innerHTML = `Load More Content`;
-  };
-}
-
-function updateGrid() {
-  const grid = document.getElementById('mainGrid');
-  if (!grid) return;
-  grid.innerHTML = allMovies.map((m, i) => movieCardTemplate(m, i)).join('');
-}
-
-function appendGrid(newItems) {
-  const grid = document.getElementById('mainGrid');
-  if (!grid) return;
-  grid.insertAdjacentHTML('beforeend', newItems.map((m, i) => movieCardTemplate(m, i + allMovies.length)).join(''));
-}
-
-function movieCardTemplate(m, i) {
+// ========== CARD TEMPLATES ==========
+function cardHTML(m) {
   return `
-    <div class="movie-card" style="animation-delay:${(i % 20) * 0.05}s" onclick="showDetail(${m.id}, '${m.type}')">
-      <div class="movie-poster">
-        <img src="${m.poster_url || 'https://place-hold.it/500x750/0f172a/10b981?text=EVC+Stream'}">
-        <div class="play-overlay"><i class="fas fa-play"></i></div>
-      </div>
-      <div class="movie-info"><h4>${m.title}</h4><div class="movie-year">${m.year}</div></div>
-      <div class="movie-rating-bar"><span>⭐ ${m.imdb_rating}</span></div>
-    </div>
-  `;
-}
-
-// --- Dynamic Actions ---
-
-window.setTab = (tab) => { currentTab = tab; currentCategory = 'All'; renderHome(); };
-window.setCategory = (cat) => { currentCategory = cat; renderHome(); };
-
-async function searchGlobal(q) {
-  if (!q) return;
-  contentArea.innerHTML = `<div class="loading-full"><i class="fas fa-spinner fa-spin"></i> Searching...</div>`;
-  const data = await fetchTMDB('search/multi', { query: q });
-  searchResults = data.results.filter(r => r.media_type === 'movie' || r.media_type === 'tv').map(r => mapResult(r, r.media_type));
-  contentArea.innerHTML = `<h1 class="section-title">Results for "${q}"</h1><div class="movie-grid" id="searchGrid"></div>`;
-  document.getElementById('searchGrid').innerHTML = searchResults.map(m => movieCardTemplate(m, 0)).join('');
-}
-
-// --- Detail Modal ---
-
-function showDetail(id, type = 'movie') {
-  const m = allMovies.find(x => x.id === id) || searchResults.find(x => x.id === id) || storage.get('history').find(x => x.id === id);
-  if (!m) return;
-  addToHistory(m);
-
-  const modal = document.createElement('div');
-  modal.className = 'modal-overlay';
-  modal.id = 'movieModal';
-
-  const personalRating = social.getRating(id);
-  const comments = social.getComments(id);
-  const isSeries = type === 'tv';
-
-  modal.innerHTML = `
-    <div class="movie-detail-modal">
-      <button class="detail-close-btn" onclick="closeModal()">✕</button>
-      <div class="detail-hero" style="background-image:url(${m.backdrop_url || m.poster_url})">
-        <div class="detail-hero-overlay">
-          <div class="detail-hero-content">
-            <h1>${m.title}</h1>
-            <div class="detail-meta"><span>${m.year}</span><span>IMDb ${m.imdb_rating}</span> <span>${type.toUpperCase()}</span></div>
-            <div class="detail-actions">
-              <button class="detail-play-btn" id="playBtn"><i class="fas fa-play"></i> Watch Now</button>
-              <button class="detail-icon-btn" onclick="toggleSaved(${m.id}, this)"><i class="fas fa-bookmark"></i></button>
-              <div class="rating-box">${[1, 2, 3, 4, 5].map(i => `<i class="fa-star ${i <= personalRating ? 'fas' : 'far'}" onclick="rateItem(${m.id}, ${i}, this)"></i>`).join('')}</div>
-            </div>
-          </div>
+    <div class="movie-card" onclick="openModal(${m.id},'${m.type}')">
+      <div class="card-poster">
+        <img src="${m.poster}" alt="${m.title}" loading="lazy" onerror="this.src='https://placehold.co/300x450/1a1a2e/666?text=No+Image'">
+        <div class="card-overlay">
+          <span class="card-rating"><i class="fas fa-star"></i> ${m.rating}</span>
         </div>
+        <div class="card-play-icon"><i class="fas fa-play"></i></div>
       </div>
-      <div class="detail-layout">
-        <div class="detail-main">
-          ${isSeries ? `<div class="series-controls"><div class="control-group"><label>Season</label><select id="seasonSelect" onchange="updateEpisodes(${m.id}, '${type}')">${(m.seasons || [{ num: 1, ep: 10 }]).map(s => `<option value="${s.num}">Season ${s.num}</option>`).join('')}</select></div><div class="control-group"><label>Episode</label><select id="episodeSelect"></select></div></div>` : ''}
-          <div class="detail-player" id="playerArea" style="display:none;"><div class="source-selector">${EMBED_SOURCES.map((s, i) => `<button class="p-source ${i === 0 ? 'active' : ''}" onclick="changeSource(${m.id}, '${type}', ${i}, this)">${s.name}</button>`).join('')}</div><div class="player-iframe-container"><iframe id="mainIframe" allowfullscreen></iframe></div></div>
-          <div class="comment-section"><h3>Comments (${comments.length})</h3><div class="comment-input"><input type="text" id="commentIn" placeholder="Write a comment..."><button onclick="postComment(${m.id})">Post</button></div><div class="comment-list" id="commentList">${comments.map(c => `<div class="comment-item"><strong>${c.user}</strong><p>${c.text}</p><small>${c.date}</small></div>`).join('')}</div></div>
-        </div>
+      <div class="card-title">${m.title}</div>
+      <div class="card-meta">
+        <span class="card-year">${m.year}</span>
+        <span class="card-rating"><i class="fas fa-star"></i> ${m.rating}</span>
       </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-  document.body.style.overflow = 'hidden';
-  if (isSeries) updateEpisodes(id, type);
-
-  document.getElementById('playBtn').onclick = () => {
-    const area = document.getElementById('playerArea'); area.style.display = 'block';
-    const iframe = document.getElementById('mainIframe');
-    if (type === 'movie') { iframe.src = EMBED_SOURCES[0].movie(m.tmdb_id || m.id); }
-    else { const s = document.getElementById('seasonSelect').value; const e = document.getElementById('episodeSelect').value; iframe.src = EMBED_SOURCES[0].tv(m.tmdb_id || m.id, s, e); }
-    area.scrollIntoView({ behavior: 'smooth' });
-  };
+    </div>`;
 }
 
-window.closeModal = () => { document.getElementById('movieModal') && document.getElementById('movieModal').remove(); document.body.style.overflow = ''; };
-window.updateEpisodes = (id, type) => {
-  const m = allMovies.find(x => x.id === id) || searchResults.find(x => x.id === id) || storage.get('history').find(x => x.id === id);
-  const sNum = parseInt(document.getElementById('seasonSelect').value);
-  const season = (m.seasons || []).find(s => s.num === sNum) || { num: 1, ep: 10 };
-  const epSelect = document.getElementById('episodeSelect');
-  epSelect.innerHTML = Array.from({ length: season.ep || 10 }, (_, i) => `<option value="${i + 1}">Episode ${i + 1}</option>`).join('');
-};
+function skelCardHTML(n = 6) {
+  return Array(n).fill(`
+    <div class="skel-card shimmer">
+      <div class="skel-poster shimmer"></div>
+      <div class="skel-title shimmer"></div>
+      <div class="skel-meta shimmer"></div>
+    </div>`).join('');
+}
 
-window.changeSource = (id, type, sIdx, btn) => {
-  const m = allMovies.find(x => x.id === id) || searchResults.find(x => x.id === id) || storage.get('history').find(x => x.id === id);
-  const iframe = document.getElementById('mainIframe');
-  document.querySelectorAll('.p-source').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  if (type === 'movie') { iframe.src = EMBED_SOURCES[sIdx].movie(m.tmdb_id || m.id); }
-  else { const s = document.getElementById('seasonSelect').value; const e = document.getElementById('episodeSelect').value; iframe.src = EMBED_SOURCES[sIdx].tv(m.tmdb_id || m.id, s, e); }
-};
+// ========== HERO BILLBOARD ==========
+function renderHero(container, m, badge) {
+  container.innerHTML = `
+    <div class="hero-bg" style="background-image:url(${m.backdrop})"></div>
+    <div class="hero-info">
+      <div class="hero-badge hero-animate"><i class="fas fa-fire"></i> ${badge}</div>
+      <h1 class="hero-title hero-animate">${m.title}</h1>
+      <div class="hero-meta hero-animate-delay">
+        <span class="rating-badge"><i class="fas fa-star"></i> ${m.rating}</span>
+        <span class="year-badge">${m.year}</span>
+        <span class="type-badge">${m.type === 'tv' ? 'ซีรีส์' : 'ภาพยนตร์'}</span>
+      </div>
+      <p class="hero-desc hero-animate-delay">${m.desc.slice(0, 200)}${m.desc.length > 200 ? '...' : ''}</p>
+      <div class="hero-actions hero-animate-delay2">
+        <button class="btn-play" onclick="openModal(${m.id},'${m.type}')"><i class="fas fa-play"></i> เล่น</button>
+        <button class="btn-glass" onclick="openModal(${m.id},'${m.type}')"><i class="fas fa-info-circle"></i> รายละเอียด</button>
+      </div>
+    </div>`;
+}
 
-window.rateItem = (id, val, star) => { social.setRating(id, val); const stars = star.parentElement.querySelectorAll('i'); stars.forEach((s, i) => { s.classList.toggle('fas', i < val); s.classList.toggle('far', i >= val); }); showToast("Rating saved"); };
-window.postComment = (id) => { const inp = document.getElementById('commentIn'); if (!inp.value.trim()) return; social.addComment(id, inp.value); inp.value = ''; const comments = social.getComments(id); document.getElementById('commentList').innerHTML = comments.map(c => `<div class="comment-item"><strong>${c.user}</strong><p>${c.text}</p><small>${c.date}</small></div>`).join(''); };
+function renderMidBillboard(container, m) {
+  container.innerHTML = `
+    <div class="mid-bg" style="background-image:url(${m.backdrop})"></div>
+    <div class="mid-info">
+      <h2 class="hero-animate">${m.title}</h2>
+      <p class="hero-animate-delay">${m.desc.slice(0, 150)}${m.desc.length > 150 ? '...' : ''}</p>
+      <div class="hero-actions hero-animate-delay2">
+        <button class="btn-play" onclick="openModal(${m.id},'${m.type}')"><i class="fas fa-play"></i> ดูเลย</button>
+        <button class="btn-glass" onclick="openModal(${m.id},'${m.type}')"><i class="fas fa-plus"></i> รายการโปรด</button>
+      </div>
+    </div>`;
+}
 
-// --- Renderers ---
+// ========== RENDER CAROUSEL ==========
+function renderRow(container, items) {
+  container.innerHTML = items.map(r => cardHTML(mapMovie(r, r.media_type))).join('');
+}
 
-function renderStaticList(title, list) {
-  contentArea.innerHTML = `<h1 class="section-title">${title}</h1><div class="movie-grid"></div>`;
-  contentArea.querySelector('.movie-grid').innerHTML = list.map(m => movieCardTemplate(m, 0)).join('');
+// ========== PAGE RENDERERS ==========
+async function renderHome() {
+  state.currentView = 'home';
+  showAllSections();
+
+  const hero = $('#heroBillboard');
+  const trendRow = $('#trendingRow');
+  const popRow = $('#popularRow');
+  const tvRow = $('#tvRow');
+  const mid = $('#midBillboard');
+  const grid = $('#gridContent');
+
+  // Skeletons
+  hero.innerHTML = '<div class="hero-skeleton shimmer"></div>';
+  trendRow.innerHTML = skelCardHTML(8);
+  popRow.innerHTML = skelCardHTML(8);
+  tvRow.innerHTML = skelCardHTML(8);
+  grid.innerHTML = '';
+
+  const [trending, popular, topTV, upcoming, nowPlaying] = await Promise.all([
+    tmdb('trending/all/day'),
+    tmdb('movie/popular'),
+    tmdb('tv/popular'),
+    tmdb('movie/upcoming', { region: 'TH' }),
+    tmdb('movie/now_playing', { region: 'TH' })
+  ]);
+
+  // Hero
+  if (trending.results.length) {
+    const heroMovie = trending.results[0];
+    renderHero(hero, mapMovie(heroMovie, heroMovie.media_type), '#1 กำลังมาแรงวันนี้');
+  }
+
+  // Rows
+  renderRow(trendRow, trending.results.slice(1, 12));
+  renderRow(popRow, popular.results.slice(0, 12));
+  renderRow(tvRow, topTV.results.slice(0, 12));
+
+  // Mid Billboard
+  if (topTV.results.length > 1) {
+    renderMidBillboard(mid, mapMovie(topTV.results[1], 'tv'));
+  }
+
+  // Grid (upcoming + now playing)
+  const gridMovies = [...upcoming.results, ...nowPlaying.results].slice(0, 18);
+  grid.innerHTML = gridMovies.map(r => cardHTML(mapMovie(r, 'movie'))).join('');
+
+  // State for load-more
+  state.endpoint = 'movie/popular';
+  state.params = {};
+  state.page = 1;
+  state.totalPages = popular.total_pages || 1;
+  state.loadedCount = gridMovies.length;
+  updateLoadMore();
+  updateCount();
+}
+
+async function renderCategory(title, type, extraParams = {}) {
+  state.currentView = type;
+  hideSectionsForBrowse();
+
+  const grid = $('#gridContent');
+  grid.innerHTML = skelCardHTML(18);
+
+  // Add heading
+  const heading = document.createElement('h2');
+  heading.className = 'search-results-header';
+  heading.textContent = title;
+  grid.parentElement.insertBefore(heading, grid);
+
+  const data = await tmdb(`discover/${type}`, { sort_by: 'popularity.desc', page: 1, ...extraParams });
+
+  // Remove any existing heading before grid
+  grid.parentElement.querySelectorAll('.search-results-header').forEach(h => h.remove());
+
+  grid.innerHTML = `<h2 class="search-results-header" style="grid-column:1/-1;padding:0">${title}</h2>` +
+    data.results.map(r => cardHTML(mapMovie(r, type))).join('');
+
+  state.endpoint = `discover/${type}`;
+  state.params = { sort_by: 'popularity.desc', ...extraParams };
+  state.page = 1;
+  state.totalPages = Math.min(data.total_pages || 1, 500); // TMDB max
+  state.loadedCount = data.results.length;
+  updateLoadMore();
+  updateCount();
 }
 
 async function renderTrending() {
-  contentArea.innerHTML = `<div class="loading-full"><i class="fas fa-spinner fa-spin"></i> Loading Trending...</div>`;
-  const data = await fetchTMDB('trending/all/week');
-  const results = data.results.filter(r => r.media_type !== 'person').map(r => mapResult(r, r.media_type));
-  contentArea.innerHTML = `<h1 class="section-title">Trending This Week</h1><div class="movie-grid"></div>`;
-  contentArea.querySelector('.movie-grid').innerHTML = results.map((m, i) => movieCardTemplate(m, i)).join('');
+  state.currentView = 'trending';
+  hideSectionsForBrowse();
+
+  const grid = $('#gridContent');
+  grid.innerHTML = skelCardHTML(18);
+
+  const data = await tmdb('trending/all/day');
+
+  grid.innerHTML = `<h2 class="search-results-header" style="grid-column:1/-1;padding:0">🔥 กำลังฮิตตอนนี้</h2>` +
+    data.results.map(r => cardHTML(mapMovie(r, r.media_type))).join('');
+
+  state.endpoint = 'trending/all/day';
+  state.params = {};
+  state.page = 1;
+  state.totalPages = Math.min(data.total_pages || 1, 500);
+  state.loadedCount = data.results.length;
+  updateLoadMore();
+  updateCount();
 }
 
-function renderCategories() {
-  const cats = ['Thai Movies', 'Action', 'Sci-Fi', 'Drama', 'Crime', 'Marvel', 'Comedy', 'Anime', 'Romance', 'Horror'];
-  contentArea.innerHTML = `<h1 class="section-title">Categories</h1><div class="category-grid">${cats.map(c => `<div class="category-card" onclick="setCategory('${c}')"><h3>${c}</h3></div>`).join('')}</div>`;
+async function renderSearch(query) {
+  if (!query || !query.trim()) return;
+  state.currentView = 'search';
+  hideSectionsForBrowse();
+
+  const grid = $('#gridContent');
+  grid.innerHTML = skelCardHTML(12);
+
+  const data = await tmdb('search/multi', { query: query.trim() });
+  const results = data.results.filter(r => r.media_type !== 'person' && r.poster_path);
+
+  if (!results.length) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <i class="fas fa-search"></i>
+        <h2>ไม่พบผลการค้นหา "${query}"</h2>
+        <p>ลองค้นหาด้วยคำอื่น</p>
+      </div>`;
+    $('#loadMoreWrap').style.display = 'none';
+    return;
+  }
+
+  grid.innerHTML = `<h2 class="search-results-header" style="grid-column:1/-1;padding:0">ผลการค้นหา "${query}"</h2>` +
+    results.map(r => cardHTML(mapMovie(r))).join('');
+
+  state.endpoint = 'search/multi';
+  state.params = { query: query.trim() };
+  state.page = 1;
+  state.totalPages = Math.min(data.total_pages || 1, 500);
+  state.loadedCount = results.length;
+  updateLoadMore();
+  updateCount();
 }
 
-function renderComingSoon() {
-  contentArea.innerHTML = `<h1 class="section-title">Coming Soon</h1><div class="movie-grid" id="upcomingGrid"></div>`;
-  fetchTMDB('movie/upcoming').then(data => { document.getElementById('upcomingGrid').innerHTML = data.results.map(r => mapResult(r)).map(m => movieCardTemplate(m, 0)).join(''); });
+// ========== GENRE FILTER ==========
+async function filterByGenre(genreId) {
+  const grid = $('#gridContent');
+  grid.innerHTML = skelCardHTML(18);
+
+  let endpoint, params;
+
+  if (genreId === 'all') {
+    endpoint = 'trending/all/day';
+    params = {};
+  } else {
+    endpoint = 'discover/movie';
+    params = { sort_by: 'popularity.desc', with_genres: genreId };
+  }
+
+  const data = await tmdb(endpoint, { ...params, page: 1 });
+
+  grid.innerHTML = data.results.map(r => cardHTML(mapMovie(r, r.media_type || 'movie'))).join('');
+
+  state.endpoint = endpoint;
+  state.params = params;
+  state.page = 1;
+  state.totalPages = Math.min(data.total_pages || 1, 500);
+  state.loadedCount = data.results.length;
+  state.activeGenre = genreId;
+  updateLoadMore();
+  updateCount();
 }
 
-function renderSettings() { contentArea.innerHTML = `<h1 class="section-title">Settings</h1><button class="save-settings-btn" onclick="clearAllData()">Reset All Data</button>`; }
-function renderHelp() { contentArea.innerHTML = `<h1 class="section-title">Help</h1><p>EVC Stream provides unlimited access to global streaming databases.</p>`; }
+// ========== LOAD MORE ==========
+async function loadMore() {
+  if (state.page >= state.totalPages) return;
 
-// --- Utils ---
+  const btn = $('#loadMoreBtn');
+  btn.classList.add('loading');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังโหลด...';
 
-window.clearAllData = () => { if (confirm("Are you sure?")) { localStorage.clear(); location.reload(); } };
-function addToHistory(m) { let h = storage.get('history'); h = h.filter(x => x.id !== m.id); h.unshift(m); storage.set('history', h.slice(0, 50)); }
-window.toggleSaved = (id, btn) => {
-  let s = storage.get('saved'); const m = allMovies.find(x => x.id === id) || searchResults.find(x => x.id === id);
-  const idx = s.findIndex(x => x.id === id);
-  if (idx >= 0) s.splice(idx, 1); else if (m) s.push(m);
-  storage.set('saved', s); btn.classList.toggle('saved'); showToast(idx >= 0 ? "Removed" : "Saved");
-};
+  state.page++;
+  const data = await tmdb(state.endpoint, { ...state.params, page: state.page });
+  state.totalPages = Math.min(data.total_pages || state.totalPages, 500);
 
-function showToast(m) { const t = document.createElement('div'); t.className = 'toast show'; t.innerHTML = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2500); }
+  const filtered = (data.results || []).filter(r => r.poster_path);
+  const newHTML = filtered.map(r => cardHTML(mapMovie(r, r.media_type || 'movie'))).join('');
+  $('#gridContent').insertAdjacentHTML('beforeend', newHTML);
 
-function setupGlobalEvents() {
-  document.querySelectorAll('.nav-item[data-page]').forEach(i => i.onclick = () => navigateTo(i.dataset.page));
-  document.getElementById('headerSavedBtn').onclick = () => navigateTo('saved');
-  document.getElementById('headerHistoryBtn').onclick = () => navigateTo('history');
-  document.getElementById('searchBtn').onclick = () => searchGlobal(document.getElementById('searchInput').value);
-  document.getElementById('searchInput').onkeydown = (e) => { if (e.key === 'Enter') searchGlobal(e.target.value); };
+  state.loadedCount += filtered.length;
 
-  const mobileHamburger = document.getElementById('mobileHamburger');
-  const sidebarOverlay = document.getElementById('sidebarOverlay');
-  const sidebar = document.getElementById('sidebar');
-  const hamburgerBtn = document.getElementById('hamburgerBtn');
-
-  if (mobileHamburger) mobileHamburger.onclick = () => { sidebar.classList.add('open'); sidebarOverlay.classList.add('active'); };
-  if (sidebarOverlay) sidebarOverlay.onclick = () => { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('active'); };
-  if (hamburgerBtn) hamburgerBtn.onclick = () => { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('active'); };
+  btn.classList.remove('loading');
+  btn.innerHTML = '<i class="fas fa-plus"></i> โหลดเพิ่มเติม';
+  updateLoadMore();
+  updateCount();
 }
 
-initApp();
+function updateLoadMore() {
+  const wrap = $('#loadMoreWrap');
+  if (!wrap) return;
+  wrap.style.display = state.page >= state.totalPages ? 'none' : '';
+}
+
+function updateCount() {
+  const el = $('#movieCount');
+  if (!el) return;
+  const totalEst = state.totalPages * 20; // ~20 per page
+  el.textContent = `แสดง ${state.loadedCount} จาก ~${totalEst.toLocaleString()}+ เรื่อง`;
+}
+
+// ========== DETAIL MODAL ==========
+async function openModal(id, type = 'movie') {
+  const overlay = $('#movieModal');
+  const content = $('#modalContent');
+
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  content.innerHTML = '<div class="hero-skeleton shimmer" style="height:420px"></div>';
+
+  const r = await tmdb(`${type}/${id}`);
+  const m = mapMovie(r, type);
+  const genres = (r.genres || []).map(g => `<span class="meta-chip genre">${g.name}</span>`).join('');
+  const runtime = r.runtime ? `${Math.floor(r.runtime / 60)}ชม. ${r.runtime % 60}น.` : (r.number_of_seasons ? `${r.number_of_seasons} ซีซั่น` : '');
+
+  content.innerHTML = `
+    <button class="modal-close" onclick="closeModal()"><i class="fas fa-xmark"></i></button>
+    <div class="modal-hero" style="background-image:url(${m.backdrop})">
+      <div class="modal-hero-gradient">
+        <div class="modal-hero-info">
+          <h1>${m.title}</h1>
+          <div class="hero-actions">
+            <button class="btn-play"><i class="fas fa-play"></i> เล่น</button>
+            <button class="btn-glass"><i class="fas fa-plus"></i> รายการโปรด</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-meta-row">
+        <span class="meta-chip match"><i class="fas fa-thumbs-up"></i> 98% Match</span>
+        <span class="meta-chip year">${m.year}</span>
+        <span class="meta-chip rating"><i class="fas fa-star"></i> ${m.rating}</span>
+        ${runtime ? `<span class="meta-chip year">${runtime}</span>` : ''}
+      </div>
+      ${genres ? `<div class="modal-meta-row">${genres}</div>` : ''}
+      <p class="modal-desc">${m.desc || 'ยังไม่มีรายละเอียดสำหรับรายการนี้'}</p>
+    </div>`;
+}
+
+function closeModal() {
+  const overlay = $('#movieModal');
+  overlay.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// ========== NAVIGATION ==========
+function navigate(page) {
+  // Clear search
+  if (page !== 'search') {
+    const si = $('#searchInput');
+    if (si) si.value = '';
+  }
+
+  // Remove any extra headers
+  $$('.search-results-header').forEach(h => {
+    if (!h.closest('.content-grid')) h.remove();
+  });
+
+  // Update nav active
+  $$('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.page === page || (page === 'home' && l.dataset.page === 'home')));
+  $$('.side-icon[data-page]').forEach(b => b.classList.toggle('active', b.dataset.page === page));
+
+  // Reset genre filter
+  $$('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === 'all'));
+  state.activeGenre = 'all';
+
+  switch (page) {
+    case 'home': renderHome(); break;
+    case 'movies': renderCategory('🎬 ภาพยนตร์ทั้งหมด', 'movie'); break;
+    case 'series': renderCategory('📺 ซีรีส์ทั้งหมด', 'tv'); break;
+    case 'cartoons': renderCategory('🎨 การ์ตูนและแอนิเมชั่น', 'movie', { with_genres: 16 }); break;
+    case 'trending': renderTrending(); break;
+    case 'search': break; // handled separately
+    case 'saved': renderSaved(); break;
+    default: renderHome();
+  }
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderSaved() {
+  hideSectionsForBrowse();
+  const grid = $('#gridContent');
+  grid.innerHTML = `
+    <div class="empty-state" style="grid-column:1/-1">
+      <i class="fas fa-bookmark"></i>
+      <h2>รายการโปรดของคุณ</h2>
+      <p>ยังไม่มีรายการที่บันทึกไว้</p>
+    </div>`;
+  $('#loadMoreWrap').style.display = 'none';
+}
+
+// ========== VISIBILITY ==========
+function showAllSections() {
+  $$('#categoryRow, #popularSection, #tvSection, #heroBillboard, #midBillboard, #filterBar, #loadMoreWrap').forEach(el => el.style.display = '');
+}
+
+function hideSectionsForBrowse() {
+  $$('#categoryRow, #popularSection, #tvSection, #heroBillboard, #midBillboard').forEach(el => el.style.display = 'none');
+  $$('#filterBar, #loadMoreWrap').forEach(el => el.style.display = '');
+}
+
+// ========== INIT ==========
+function init() {
+  // Nav links
+  $$('.nav-link[data-page]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigate(link.dataset.page);
+    });
+  });
+
+  // Side nav
+  $$('.side-icon[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const page = btn.dataset.page;
+      if (page === 'search') {
+        $('#searchInput').focus();
+        return;
+      }
+      navigate(page);
+    });
+  });
+
+  // See all buttons
+  $$('.see-all-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => navigate(btn.dataset.page));
+  });
+
+  // Brand logo
+  $('#brandLogo')?.addEventListener('click', () => navigate('home'));
+
+  // Search
+  const searchInput = $('#searchInput');
+  let searchTimer;
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      clearTimeout(searchTimer);
+      renderSearch(searchInput.value);
+    }
+  });
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    if (searchInput.value.length >= 2) {
+      searchTimer = setTimeout(() => renderSearch(searchInput.value), 600);
+    }
+  });
+
+  // Genre filter chips
+  $$('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      $$('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      filterByGenre(chip.dataset.filter);
+    });
+  });
+
+  // Load more
+  $('#loadMoreBtn')?.addEventListener('click', loadMore);
+
+  // Modal close
+  $('#movieModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'movieModal') closeModal();
+  });
+
+  // ESC close
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // Header scroll effect
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const header = $('#mainHeader');
+        if (header) header.classList.toggle('scrolled', window.scrollY > 50);
+        ticking = false;
+      });
+      ticking = true;
+    }
+  });
+
+  // Start!
+  navigate('home');
+}
+
+// Make functions global
+window.openModal = openModal;
+window.closeModal = closeModal;
+
+document.addEventListener('DOMContentLoaded', init);
